@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package reddit.reddit_feed_api.v1;
+
+import "google/api/annotations.proto";
+import "validate/validate.proto";
+
+option go_package = "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1;reddit_feed_api";
+
+service RedditFeedAPIService {
+  // Create new posts
+  rpc CreatePostsV1(CreatePostsV1Request) returns (CreatePostsV1Response) {
+    option (google.api.http) = {
+      post: "/v1/posts"
+    };
+  }
+
+  // Generate a feed of posts
+  rpc GenerateFeedV1(GenerateFeedV1Request) returns (GenerateFeedV1Response) {
+    option (google.api.http) = {
+      get: "/v1/feed"
+    };
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message CreatePostsV1Request {
+  repeated Post posts = 1
+      [(validate.rules).repeated = { min_items: 1, max_items: 1024 }];
+}
+
+message CreatePostsV1Response {
+  int64 number_of_created_posts = 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message GenerateFeedV1Request {
+  uint64 limit  = 1 [(validate.rules).uint64 = { gte: 3, lte: 27 }];
+  uint64 offset = 2;
+}
+
+message GenerateFeedV1Response {
+  Feed feed = 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message Post {}
+
+message Feed {}
