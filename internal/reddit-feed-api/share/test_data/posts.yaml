@@ -1,0 +1,50 @@
+posts:
+  - id: 1
+    title: Text
+    author: t2_00000001
+    link: https://reddit.com
+    subreddit: Text
+    content: Text
+    score: 0
+    promoted: false
+    notSafeForWork: false
+
+  - id: 2
+    title: Text
+    author: t2_00000002
+    link: https://reddit.com
+    subreddit: Text
+    content: Text
+    score: 10
+    promoted: false
+    notSafeForWork: false
+
+  - id: 3
+    title: Text
+    author: t2_00000003
+    link: https://reddit.com
+    subreddit: Text
+    content: Text
+    score: 100
+    promoted: false
+    notSafeForWork: false
+
+  - id: 4
+    title: Text
+    author: t2_00000004
+    link: https://reddit.com
+    subreddit: Text
+    content: Text
+    score: 1000
+    promoted: false
+    notSafeForWork: false
+
+  - id: 5
+    title: Text
+    author: t2_00000005
+    link: https://reddit.com
+    subreddit: Text
+    content: Text
+    score: 1000
+    promoted: false
+    notSafeForWork: false

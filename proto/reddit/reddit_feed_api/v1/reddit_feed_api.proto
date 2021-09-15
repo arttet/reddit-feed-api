@@ -5,7 +5,7 @@ package reddit.reddit_feed_api.v1;
 import "google/api/annotations.proto";
 import "validate/validate.proto";
 
-option go_package = "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1;reddit_feed_api";
+option go_package = "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api;reddit_feed_api";
 
 service RedditFeedAPIService {
   // Create new posts

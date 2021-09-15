@@ -38,8 +38,8 @@ run:
 
 .PHONY: test
 test:
-	go test -v -race -timeout 30s -coverprofile cover.out ./...
-	go tool cover -func cover.out | grep total | awk '{print $3}'
+	go test -v -timeout 30s -coverprofile cover.out ./...
+	go tool cover -func cover.out | grep total | awk '{print ($$3)}'
 
 .PHONY: lint
 lint:
@@ -47,7 +47,11 @@ lint:
 
 .PHONY: style
 style:
-	git-clang-format --commit "HEAD~1" --style file --diff --extensions proto
+	find . -iname *.proto | xargs clang-format -i
+
+.PHONY: cover
+cover:
+	go tool cover -html cover.out
 
 ###############################################################################
 
@@ -83,6 +87,6 @@ generate: .generate
 
 	mv pkg/$(SERVICE_NAME)/github.com/$(SERVICE_PATH)/pkg/$(SERVICE_NAME)/* pkg/$(SERVICE_NAME)
 	rm -rf pkg/$(SERVICE_NAME)/github.com/
-	cd pkg/$(SERVICE_NAME) && ls go.mod || (go mod init github.com/$(SERVICE_PATH)/pkg/$(SERVICE_NAME) && go mod tidy)
+	cd pkg/$(SERVICE_NAME) # && ls go.mod || (go mod init github.com/$(SERVICE_PATH)/pkg/$(SERVICE_NAME) && go mod tidy)
 
 ###############################################################################
