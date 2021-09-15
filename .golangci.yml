@@ -48,6 +48,7 @@ linters-settings:
       - style
     disabled-checks:
       - commentedOutCode
+      - paramTypeCombine
       - whyNoLint
     settings:
       hugeParam:
@@ -131,6 +132,8 @@ linters:
     - funlen # Tool for detection of long functions
     - revive # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
     - exhaustive # check exhaustiveness of enum switch statements
+    - nlreturn # nlreturn checks for a new line before return and branch statements to increase code clarity
+    - paralleltest # paralleltest detects missing usage of t.Parallel() method in your Go test
   enable:
     - sqlclosecheck # Checks that sql.Rows and sql.Stmt are closed.
     - promlinter # Check Prometheus metrics naming via promlint
@@ -163,10 +166,8 @@ linters:
     - nakedret # Finds naked returns in functions greater than a specified function length
     - nestif # Reports deeply nested if statements
     - nilerr # Finds the code that returns nil even if it checks that the error is not nil.
-    - nlreturn # nlreturn checks for a new line before return and branch statements to increase code clarity
     - noctx # noctx finds sending http request without context.Context
     - nolintlint # Reports ill-formed or insufficient nolint directives
-    - paralleltest # paralleltest detects missing usage of t.Parallel() method in your Go test
     - prealloc # Finds slice declarations that could potentially be preallocated
     - predeclared # find code that shadows one of Go's predeclared identifiers
     - rowserrcheck # checks whether Err of rows is checked successfully
