@@ -1,50 +1,81 @@
 posts:
   - id: 1
-    title: Text
+    title: Title
     author: t2_00000001
     link: https://reddit.com
-    subreddit: Text
-    content: Text
+    subreddit: SubReddit
+    content:
     score: 0
     promoted: false
     notSafeForWork: false
 
   - id: 2
-    title: Text
+    title: Title
     author: t2_00000002
-    link: https://reddit.com
-    subreddit: Text
-    content: Text
+    link:
+    subreddit: SubReddit
+    content: Content
     score: 10
     promoted: false
     notSafeForWork: false
 
   - id: 3
-    title: Text
+    title: Title
     author: t2_00000003
     link: https://reddit.com
-    subreddit: Text
-    content: Text
+    subreddit: SubReddit
+    content:
     score: 100
     promoted: false
     notSafeForWork: false
 
   - id: 4
-    title: Text
+    title: Title
     author: t2_00000004
-    link: https://reddit.com
-    subreddit: Text
-    content: Text
+    link:
+    subreddit: SubReddit
+    content: Content
     score: 1000
     promoted: false
     notSafeForWork: false
 
   - id: 5
-    title: Text
+    title: Title
     author: t2_00000005
     link: https://reddit.com
-    subreddit: Text
-    content: Text
+    subreddit: SubReddit
+    content:
     score: 1000
+    promoted: false
+    notSafeForWork: false
+
+wrongPosts:
+  - id: 1
+    title: Title
+    author: t2_~0000001
+    link: https://reddit.com
+    subreddit: SubReddit
+    content:
+    score: 0
+    promoted: false
+    notSafeForWork: false
+
+  - id: 2
+    title: Title
+    author: t2_00000002
+    link: https://reddit.com
+    subreddit: SubReddit
+    content: Content
+    score: 10
+    promoted: false
+    notSafeForWork: false
+
+  - id: 3
+    title: Title
+    author: t2_00000003
+    link: ~https://reddit.com
+    subreddit: SubReddit
+    content:
+    score: 0
     promoted: false
     notSafeForWork: false

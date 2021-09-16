@@ -1,0 +1,25 @@
+project:
+  name: Reddit Feed API
+  debug: true
+  environment: development
+  swaggerDir: swagger
+
+grpc:
+  host: 0.0.0.0
+  port: 8082
+  maxConnectionIdle: 5 # Minutes
+  timeout: 15 # Seconds
+  maxConnectionAge: 5 # Minutes
+
+rest:
+  host: 0.0.0.0
+  port: 8081
+
+database:
+  host: postgres
+  port: 5432
+  user: docker
+  password: docker
+  name: reddit_feed_api
+  sslmode: disable
+  driver: pgx
