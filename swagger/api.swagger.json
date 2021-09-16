@@ -11,7 +11,7 @@
     "application/json"
   ],
   "paths": {
-    "/v1/feed": {
+    "/v1/feed/{page_id}": {
       "get": {
         "summary": "Generate a feed of posts",
         "operationId": "RedditFeedAPIService_GenerateFeedV1",
@@ -31,16 +31,9 @@
         },
         "parameters": [
           {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "uint64"
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
+            "name": "page_id",
+            "in": "path",
+            "required": true,
             "type": "string",
             "format": "uint64"
           }
@@ -117,14 +110,14 @@
         }
       }
     },
-    "v1Feed": {
-      "type": "object"
-    },
     "v1GenerateFeedV1Response": {
       "type": "object",
       "properties": {
-        "feed": {
-          "$ref": "#/definitions/v1Feed"
+        "posts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Post"
+          }
         }
       }
     },

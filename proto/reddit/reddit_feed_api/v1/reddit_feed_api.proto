@@ -18,7 +18,7 @@ service RedditFeedAPIService {
   // Generate a feed of posts
   rpc GenerateFeedV1(GenerateFeedV1Request) returns (GenerateFeedV1Response) {
     option (google.api.http) = {
-      get: "/v1/feed"
+      get: "/v1/feed/{page_id}"
     };
   }
 }
@@ -37,12 +37,11 @@ message CreatePostsV1Response {
 ///////////////////////////////////////////////////////////////////////////////
 
 message GenerateFeedV1Request {
-  uint64 limit  = 1 [(validate.rules).uint64 = { gte: 3, lte: 27 }];
-  uint64 offset = 2;
+  uint64 page_id = 1 [(validate.rules).uint64.gte = 1];
 }
 
 message GenerateFeedV1Response {
-  Feed feed = 1;
+  repeated Post posts = 1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,5 +63,3 @@ message Post {
   bool   promoted          = 7;
   bool   not_safe_for_work = 8;
 }
-
-message Feed {}

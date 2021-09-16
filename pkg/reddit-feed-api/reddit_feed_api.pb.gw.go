@@ -67,19 +67,25 @@ func local_request_RedditFeedAPIService_CreatePostsV1_0(ctx context.Context, mar
 
 }
 
-var (
-	filter_RedditFeedAPIService_GenerateFeedV1_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
 func request_RedditFeedAPIService_GenerateFeedV1_0(ctx context.Context, marshaler runtime.Marshaler, client RedditFeedAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GenerateFeedV1Request
 	var metadata runtime.ServerMetadata
 
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["page_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "page_id")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_RedditFeedAPIService_GenerateFeedV1_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+
+	protoReq.PageId, err = runtime.Uint64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "page_id", err)
 	}
 
 	msg, err := client.GenerateFeedV1(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -91,11 +97,21 @@ func local_request_RedditFeedAPIService_GenerateFeedV1_0(ctx context.Context, ma
 	var protoReq GenerateFeedV1Request
 	var metadata runtime.ServerMetadata
 
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["page_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "page_id")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_RedditFeedAPIService_GenerateFeedV1_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+
+	protoReq.PageId, err = runtime.Uint64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "page_id", err)
 	}
 
 	msg, err := server.GenerateFeedV1(ctx, &protoReq)
@@ -138,7 +154,7 @@ func RegisterRedditFeedAPIServiceHandlerServer(ctx context.Context, mux *runtime
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/reddit.reddit_feed_api.v1.RedditFeedAPIService/GenerateFeedV1", runtime.WithHTTPPathPattern("/v1/feed"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/reddit.reddit_feed_api.v1.RedditFeedAPIService/GenerateFeedV1", runtime.WithHTTPPathPattern("/v1/feed/{page_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -220,7 +236,7 @@ func RegisterRedditFeedAPIServiceHandlerClient(ctx context.Context, mux *runtime
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/reddit.reddit_feed_api.v1.RedditFeedAPIService/GenerateFeedV1", runtime.WithHTTPPathPattern("/v1/feed"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/reddit.reddit_feed_api.v1.RedditFeedAPIService/GenerateFeedV1", runtime.WithHTTPPathPattern("/v1/feed/{page_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -242,7 +258,7 @@ func RegisterRedditFeedAPIServiceHandlerClient(ctx context.Context, mux *runtime
 var (
 	pattern_RedditFeedAPIService_CreatePostsV1_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "posts"}, ""))
 
-	pattern_RedditFeedAPIService_GenerateFeedV1_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "feed"}, ""))
+	pattern_RedditFeedAPIService_GenerateFeedV1_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "feed", "page_id"}, ""))
 )
 
 var (

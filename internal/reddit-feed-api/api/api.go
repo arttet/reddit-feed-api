@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 
 	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/model"
 	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/repo"
@@ -102,5 +103,66 @@ func (a *api) GenerateFeedV1(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	const maxCountPosts = 27
+
+	posts, err := a.repo.ListPosts(ctx, maxCountPosts, maxCountPosts*(request.PageId-1))
+	if err != nil {
+		if errors.Is(err, repo.ErrPostNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		log.Error().Err(err).Msg("Failed to fill the data")
+		return nil, status.Error(codes.ResourceExhausted, err.Error())
+	}
+
+	n := len(posts)
+	var promotedPost *model.Post
+	if n >= 3 {
+		promotedPost, err = a.repo.PromotedPost(ctx)
+		log.Warn().Err(err).Msg("Failed to find a promoted post")
+	}
+
+	counter := 0
+	list := make([]*pb.Post, 0, n)
+
+	insert := func(post model.Post) {
+		result := &pb.Post{
+			Title:          post.Title,
+			Author:         post.Author,
+			Link:           post.Link,
+			Subreddit:      post.Subreddit,
+			Content:        post.Content,
+			Score:          post.Score,
+			Promoted:       post.Promoted,
+			NotSafeForWork: post.NotSafeForWork,
+		}
+		list = append(list, result)
+		counter++
+	}
+
+	for i, post := range posts {
+		if counter == n {
+			break
+		}
+
+		if promotedPost != nil && (counter == 1 || counter == 15) && !posts[i].NotSafeForWork && !posts[i-1].NotSafeForWork {
+			insert(*promotedPost)
+		}
+
+		if post.Promoted && i > 0 && posts[i-1].NotSafeForWork {
+			continue
+		}
+
+		if post.Promoted && i < n-1 && posts[i+1].NotSafeForWork {
+			continue
+		}
+
+		insert(post)
+	}
+
+	response := &pb.GenerateFeedV1Response{
+		Posts: list,
+	}
+
+	return response, nil
 }
