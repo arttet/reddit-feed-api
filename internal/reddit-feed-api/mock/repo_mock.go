@@ -64,3 +64,18 @@ func (mr *MockRepoMockRecorder) ListPosts(arg0, arg1, arg2 interface{}) *gomock.
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPosts", reflect.TypeOf((*MockRepo)(nil).ListPosts), arg0, arg1, arg2)
 }
+
+// PromotedPost mocks base method.
+func (m *MockRepo) PromotedPost(arg0 context.Context) (*model.Post, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromotedPost", arg0)
+	ret0, _ := ret[0].(*model.Post)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PromotedPost indicates an expected call of PromotedPost.
+func (mr *MockRepoMockRecorder) PromotedPost(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromotedPost", reflect.TypeOf((*MockRepo)(nil).PromotedPost), arg0)
+}
