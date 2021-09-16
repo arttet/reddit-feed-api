@@ -199,14 +199,12 @@ func (m *GenerateFeedV1Request) Validate() error {
 		return nil
 	}
 
-	if val := m.GetLimit(); val < 3 || val > 27 {
+	if m.GetPageId() < 1 {
 		return GenerateFeedV1RequestValidationError{
-			field:  "Limit",
-			reason: "value must be inside range [3, 27]",
+			field:  "PageId",
+			reason: "value must be greater than or equal to 1",
 		}
 	}
-
-	// no validation rules for Offset
 
 	return nil
 }
@@ -275,14 +273,19 @@ func (m *GenerateFeedV1Response) Validate() error {
 		return nil
 	}
 
-	if v, ok := interface{}(m.GetFeed()).(interface{ Validate() error }); ok {
-		if err := v.Validate(); err != nil {
-			return GenerateFeedV1ResponseValidationError{
-				field:  "Feed",
-				reason: "embedded message failed validation",
-				cause:  err,
+	for idx, item := range m.GetPosts() {
+		_, _ = idx, item
+
+		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return GenerateFeedV1ResponseValidationError{
+					field:  fmt.Sprintf("Posts[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
 			}
 		}
+
 	}
 
 	return nil
@@ -459,67 +462,3 @@ var _ interface {
 } = PostValidationError{}
 
 var _Post_Author_Pattern = regexp.MustCompile("^t2_[a-z0-9]{8}$")
-
-// Validate checks the field values on Feed with the rules defined in the proto
-// definition for this message. If any rules are violated, an error is returned.
-func (m *Feed) Validate() error {
-	if m == nil {
-		return nil
-	}
-
-	return nil
-}
-
-// FeedValidationError is the validation error returned by Feed.Validate if the
-// designated constraints aren't met.
-type FeedValidationError struct {
-	field  string
-	reason string
-	cause  error
-	key    bool
-}
-
-// Field function returns field value.
-func (e FeedValidationError) Field() string { return e.field }
-
-// Reason function returns reason value.
-func (e FeedValidationError) Reason() string { return e.reason }
-
-// Cause function returns cause value.
-func (e FeedValidationError) Cause() error { return e.cause }
-
-// Key function returns key value.
-func (e FeedValidationError) Key() bool { return e.key }
-
-// ErrorName returns error name.
-func (e FeedValidationError) ErrorName() string { return "FeedValidationError" }
-
-// Error satisfies the builtin error interface
-func (e FeedValidationError) Error() string {
-	cause := ""
-	if e.cause != nil {
-		cause = fmt.Sprintf(" | caused by: %v", e.cause)
-	}
-
-	key := ""
-	if e.key {
-		key = "key for "
-	}
-
-	return fmt.Sprintf(
-		"invalid %sFeed.%s: %s%s",
-		key,
-		e.field,
-		e.reason,
-		cause)
-}
-
-var _ error = FeedValidationError{}
-
-var _ interface {
-	Field() string
-	Reason() string
-	Key() bool
-	Cause() error
-	ErrorName() string
-} = FeedValidationError{}
