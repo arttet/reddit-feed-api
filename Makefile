@@ -25,12 +25,12 @@ endif
 ###############################################################################
 
 SERVICE_NAME=reddit-feed-api
-SERVICE_PATH=arttet/reddit-feed-api
+SERVICE_PATH=github.com/arttet/reddit-feed-api
 
 ###############################################################################
 
 .PHONY: build
-build: generate
+build: generate .build
 
 .PHONY: run
 run:
@@ -52,6 +52,10 @@ style:
 .PHONY: cover
 cover:
 	go tool cover -html cover.out
+
+.PHONY: grpcui
+grpcui:
+		grpcui -plaintext 0.0.0.0:8082
 
 ###############################################################################
 
@@ -85,8 +89,18 @@ generate: .generate
 		chmod +x "$(GOBIN)/buf")
 	@PATH="$(GOBIN):$(PATH)" buf generate
 
-	mv pkg/$(SERVICE_NAME)/github.com/$(SERVICE_PATH)/pkg/$(SERVICE_NAME)/* pkg/$(SERVICE_NAME)
+	mv pkg/$(SERVICE_NAME)/$(SERVICE_PATH)/pkg/$(SERVICE_NAME)/* pkg/$(SERVICE_NAME)
 	rm -rf pkg/$(SERVICE_NAME)/github.com/
-	cd pkg/$(SERVICE_NAME) # && ls go.mod || (go mod init github.com/$(SERVICE_PATH)/pkg/$(SERVICE_NAME) && go mod tidy)
+	cd pkg/$(SERVICE_NAME) # && ls go.mod || (go mod init $(SERVICE_PATH)/pkg/$(SERVICE_NAME) && go mod tidy)
 
 ###############################################################################
+
+.build:
+	go mod download && CGO_ENABLED=0 go build \
+		-tags='no_mysql no_sqlite3' \
+		-ldflags=" \
+			-X '$(SERVICE_PATH)/internal/config.version=$(VERSION)' \
+			-X '$(SERVICE_PATH)/internal/config.commitHash=$(COMMIT_HASH)' \
+		" \
+		-o ./bin/reddit-feed-api ./cmd/reddit-feed-api/main.go
+	mv ./bin/reddit-feed-api ./bin/reddit-feed-api.exe

@@ -129,7 +129,34 @@
       }
     },
     "v1Post": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "link": {
+          "type": "string"
+        },
+        "subreddit": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "score": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "promoted": {
+          "type": "boolean"
+        },
+        "not_safe_for_work": {
+          "type": "boolean"
+        }
+      }
     }
   }
 }

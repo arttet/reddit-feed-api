@@ -47,6 +47,22 @@ message GenerateFeedV1Response {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-message Post {}
+message Post {
+  string title             = 1;
+  string author            = 2 [(validate.rules).string = {
+    max_bytes: 11,
+    prefix: "t2_",
+    pattern: "^t2_[a-z0-9]{8}$",
+  }];
+  string link              = 3 [(validate.rules).string = {
+    uri_ref: true,
+    ignore_empty: true,
+  }];
+  string subreddit         = 4;
+  string content           = 5;
+  uint64 score             = 6 [(validate.rules).uint64.gte = 0];
+  bool   promoted          = 7;
+  bool   not_safe_for_work = 8;
+}
 
 message Feed {}
