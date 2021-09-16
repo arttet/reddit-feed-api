@@ -149,7 +149,7 @@ func (a *api) GenerateFeedV1(
 			insert(*promotedPost)
 		}
 
-		if post.Promoted && i > 0 && posts[i-1].NotSafeForWork {
+		if post.Promoted && counter > 0 && list[counter-1].NotSafeForWork {
 			continue
 		}
 
