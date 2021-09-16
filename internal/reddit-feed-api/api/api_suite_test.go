@@ -1,4 +1,4 @@
-package repo_test
+package api_test
 
 import (
 	"io/ioutil"
@@ -13,10 +13,11 @@ import (
 )
 
 var testData struct {
-	Posts []model.Post `yaml:"posts"`
+	Posts      []model.Post `yaml:"posts"`
+	WrongPosts []model.Post `yaml:"wrongPosts"`
 }
 
-func TestRepo(t *testing.T) {
+func TestAPI(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	file, err := ioutil.ReadFile("../share/test_data/posts.yaml")
@@ -25,5 +26,5 @@ func TestRepo(t *testing.T) {
 	err = yaml.Unmarshal(file, &testData)
 	Expect(err).Should(BeNil())
 
-	RunSpecs(t, "Repo Suite")
+	RunSpecs(t, "API Suite")
 }

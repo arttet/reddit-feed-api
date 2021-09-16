@@ -351,6 +351,56 @@ func (m *Post) Validate() error {
 		return nil
 	}
 
+	// no validation rules for Title
+
+	if len(m.GetAuthor()) > 11 {
+		return PostValidationError{
+			field:  "Author",
+			reason: "value length must be at most 11 bytes",
+		}
+	}
+
+	if !strings.HasPrefix(m.GetAuthor(), "t2_") {
+		return PostValidationError{
+			field:  "Author",
+			reason: "value does not have prefix \"t2_\"",
+		}
+	}
+
+	if !_Post_Author_Pattern.MatchString(m.GetAuthor()) {
+		return PostValidationError{
+			field:  "Author",
+			reason: "value does not match regex pattern \"^t2_[a-z0-9]{8}$\"",
+		}
+	}
+
+	if m.GetLink() != "" {
+
+		if _, err := url.Parse(m.GetLink()); err != nil {
+			return PostValidationError{
+				field:  "Link",
+				reason: "value must be a valid URI",
+				cause:  err,
+			}
+		}
+
+	}
+
+	// no validation rules for Subreddit
+
+	// no validation rules for Content
+
+	if m.GetScore() < 0 {
+		return PostValidationError{
+			field:  "Score",
+			reason: "value must be greater than or equal to 0",
+		}
+	}
+
+	// no validation rules for Promoted
+
+	// no validation rules for NotSafeForWork
+
 	return nil
 }
 
@@ -407,6 +457,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = PostValidationError{}
+
+var _Post_Author_Pattern = regexp.MustCompile("^t2_[a-z0-9]{8}$")
 
 // Validate checks the field values on Feed with the rules defined in the proto
 // definition for this message. If any rules are violated, an error is returned.
