@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -12,17 +10,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/arttet/reddit-feed-api/internal/api"
 	"github.com/arttet/reddit-feed-api/internal/config"
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/api"
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/repo"
-	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
-
-	_ "github.com/jackc/pgx/v4"
-	_ "github.com/jackc/pgx/v4/stdlib"
-	_ "github.com/lib/pq"
-
-	"github.com/jmoiron/sqlx"
-	"github.com/pressly/goose/v3"
+	"github.com/arttet/reddit-feed-api/internal/database"
+	"github.com/arttet/reddit-feed-api/internal/repo"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -30,6 +21,12 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	_ "github.com/jackc/pgx/v4"
+	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/lib/pq"
+
+	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
 )
 
 func main() {
@@ -66,14 +63,14 @@ func main() {
 		cfg.Database.SslMode,
 	)
 
-	db, err := NewPostgres(dsn, cfg.Database.Driver)
+	db, err := database.NewConnection(dsn, cfg.Database.Driver)
 	if err != nil {
 		log.Fatal().Err(err).Msg("db initialization")
 	}
 	defer db.Close()
 
 	if *migration != "" {
-		if err := Migrate(db.DB, *migration); err != nil {
+		if err := database.Migrate(db.DB, *migration); err != nil {
 			log.Error().Err(err).Msg("migrations initialization")
 			return
 		}
@@ -95,45 +92,10 @@ func main() {
 		if err := runHTTP(&cfg); err != nil {
 			log.Fatal().Err(err).Msg("Failed creating REST server")
 		}
-		log.Error().Err(err).Msg("REST")
 		wg.Done()
 	}()
 
 	wg.Wait()
-}
-
-func NewPostgres(dsn, driver string) (*sqlx.DB, error) {
-	db, err := sqlx.Open(driver, dsn)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to create database connection")
-		return nil, err
-	}
-
-	if err = db.Ping(); err != nil {
-		log.Error().Err(err).Msg("failed ping the database")
-		return nil, err
-	}
-
-	return db, nil
-}
-
-func Migrate(db *sql.DB, command string) error {
-	switch command {
-	case "up":
-		if err := goose.Up(db, "migrations"); err != nil {
-			log.Error().Err(err).Msg("Migration failed")
-			return err
-		}
-	case "down":
-		if err := goose.Down(db, "migrations"); err != nil {
-			log.Error().Err(err).Msg("Migration failed")
-			return err
-		}
-	default:
-		log.Warn().Msgf("Invalid command for 'migration' flag: '%v'", command)
-		return errors.New("invalid command")
-	}
-	return nil
 }
 
 func runGRPC(r repo.Repo, host string, port int, debug bool) error {

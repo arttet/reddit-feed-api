@@ -47,6 +47,7 @@ lint:
 
 .PHONY: style
 style:
+	find . -iname *.go | xargs gofmt -w
 	find . -iname *.proto | xargs clang-format -i
 
 .PHONY: cover
@@ -63,6 +64,9 @@ grpcui:
 deps: .deps
 
 .deps:
+	@ # https://github.com/golang/mock
+	go install github.com/golang/mock/mockgen@v1.6.0
+
 	@ # https://pkg.go.dev/google.golang.org/protobuf/cmd/protoc-gen-go
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 

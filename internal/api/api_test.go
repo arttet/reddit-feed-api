@@ -4,13 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"reflect"
 
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/api"
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/model"
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/repo"
-	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
+	"github.com/arttet/reddit-feed-api/internal/api"
+	"github.com/arttet/reddit-feed-api/internal/model"
+	"github.com/arttet/reddit-feed-api/internal/repo"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,9 +18,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-)
 
-var errDatabaseConnection = errors.New("error establishing a database connection")
+	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
+)
 
 var _ = Describe("Reddit Feed API Server", func() {
 	var (
@@ -86,12 +84,20 @@ var _ = Describe("Reddit Feed API Server", func() {
 				posts[i] = &pb.Post{
 					Title:          post.Title,
 					Author:         post.Author,
-					Link:           post.Link,
 					Subreddit:      post.Subreddit,
-					Content:        post.Content,
 					Score:          post.Score,
 					Promoted:       post.Promoted,
 					NotSafeForWork: post.NotSafeForWork,
+				}
+
+				if post.Link != "" {
+					posts[i].PostType = &pb.Post_Link{
+						Link: post.Link,
+					}
+				} else {
+					posts[i].PostType = &pb.Post_Content{
+						Content: post.Content,
+					}
 				}
 			}
 		})
@@ -119,9 +125,6 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 			It("should return a number of the created posts correctly", func() {
 				Expect(response.NumberOfCreatedPosts).Should(BeEquivalentTo(len(testData.Posts)))
-			})
-
-			It("should not be an error", func() {
 				Expect(err).Should(BeNil())
 			})
 		})
@@ -137,9 +140,6 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 			It("should return an empty response", func() {
 				Expect(response).Should(BeNil())
-			})
-
-			It("should return an invalid argument error", func() {
 				Expect(status.Convert(err).Code()).Should(Equal(codes.InvalidArgument))
 			})
 		})
@@ -149,19 +149,27 @@ var _ = Describe("Reddit Feed API Server", func() {
 				post := post
 
 				BeforeEach(func() {
+					result := pb.Post{
+						Title:          post.Title,
+						Author:         post.Author,
+						Subreddit:      post.Subreddit,
+						Score:          post.Score,
+						Promoted:       post.Promoted,
+						NotSafeForWork: post.NotSafeForWork,
+					}
+
+					if post.Link != "" {
+						result.PostType = &pb.Post_Link{
+							Link: post.Link,
+						}
+					} else {
+						result.PostType = &pb.Post_Content{
+							Content: post.Content,
+						}
+					}
+
 					request = &pb.CreatePostsV1Request{
-						Posts: []*pb.Post{
-							{
-								Title:          post.Title,
-								Author:         post.Author,
-								Link:           post.Link,
-								Subreddit:      post.Subreddit,
-								Content:        post.Content,
-								Score:          post.Score,
-								Promoted:       post.Promoted,
-								NotSafeForWork: post.NotSafeForWork,
-							},
-						},
+						Posts: []*pb.Post{&result},
 					}
 
 					response, err = server.CreatePostsV1(ctx, request)
@@ -169,9 +177,6 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 				It("should return an empty response", func() {
 					Expect(response).Should(BeNil())
-				})
-
-				It("should return an invalid argument error", func() {
 					Expect(status.Convert(err).Code()).Should(Equal(codes.InvalidArgument))
 				})
 			}
@@ -181,7 +186,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 			BeforeEach(func() {
 				mock.ExpectExec("INSERT INTO post").
 					WithArgs(values...).
-					WillReturnError(errDatabaseConnection)
+					WillReturnError(sql.ErrConnDone)
 
 				request = &pb.CreatePostsV1Request{
 					Posts: posts,
@@ -192,10 +197,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 			It("should return an empty response", func() {
 				Expect(response).Should(BeNil())
-			})
-
-			It("should return a resource exhausted error", func() {
-				Expect(status.Convert(err).Code()).Should(Equal(codes.ResourceExhausted))
+				Expect(status.Convert(err).Code()).Should(Equal(codes.Unavailable))
 			})
 		})
 	})

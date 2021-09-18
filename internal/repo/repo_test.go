@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"reflect"
 
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/model"
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/repo"
+	"github.com/arttet/reddit-feed-api/internal/model"
+	"github.com/arttet/reddit-feed-api/internal/repo"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
@@ -17,8 +16,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-
-var errDatabaseConnection = errors.New("error establishing a database connection")
 
 var _ = Describe("Repo", func() {
 	var (
@@ -93,28 +90,21 @@ var _ = Describe("Repo", func() {
 
 			It("should return the number of the created posts correctly", func() {
 				Expect(numberOfTheCreatedPosts).To(Equal(rowsAffected))
-			})
-
-			It("should not be an error", func() {
 				Expect(err).Should(BeNil())
 			})
 		})
 
 		Context("when fails to create", func() {
 			BeforeEach(func() {
-				exec.WillReturnError(errDatabaseConnection)
+				exec.WillReturnError(sql.ErrConnDone)
 				numberOfTheCreatedPosts, err = repository.CreatePosts(ctx, testData.Posts)
 			})
 
 			It("should return the zero-value", func() {
 				Expect(numberOfTheCreatedPosts).To(BeZero())
-			})
-
-			It("should be the error", func() {
-				Expect(err).Should(MatchError(errDatabaseConnection))
+				Expect(err).Should(MatchError(sql.ErrConnDone))
 			})
 		})
-
 	})
 
 	// ////////////////////////////////////////////////////////////////////////
@@ -178,9 +168,6 @@ var _ = Describe("Repo", func() {
 
 			It("should populate the slice correctly", func() {
 				Expect(result).ShouldNot(BeEmpty())
-			})
-
-			It("should not be an error", func() {
 				Expect(err).Should(BeNil())
 			})
 		})
@@ -193,25 +180,19 @@ var _ = Describe("Repo", func() {
 
 			It("should return an empty list of the posts", func() {
 				Expect(result).Should(BeNil())
-			})
-
-			It("should be the error", func() {
-				Expect(err).Should(MatchError(repo.ErrPostNotFound))
+				Expect(err).Should(MatchError(sql.ErrNoRows))
 			})
 		})
 
 		Context("when fails to list", func() {
 			BeforeEach(func() {
-				exec.WillReturnError(errDatabaseConnection)
+				exec.WillReturnError(sql.ErrConnDone)
 				result, err = repository.ListPosts(ctx, limit, offset)
 			})
 
 			It("should return an empty list of the posts", func() {
 				Expect(result).Should(BeNil())
-			})
-
-			It("should be the error", func() {
-				Expect(err).Should(MatchError(errDatabaseConnection))
+				Expect(err).Should(MatchError(sql.ErrConnDone))
 			})
 		})
 	})

@@ -1,4 +1,5 @@
-INSERT INTO public.post
+-- +goose Up
+INSERT INTO post
   (title, author, link, subreddit, content, score, promoted, not_safe_for_work)
 VALUES
   ('Title', 't2_00000001', 'https://reddit.com', 'SubReddit', '', 85, false, false),
@@ -18,4 +19,6 @@ VALUES
   ('Title', 't2_00000015', 'https://reddit.com', 'SubReddit', '', 99, false, false),
   ('Title', 't2_00000016', '', 'SubReddit', 'Content', 100, false, true),
   ('Title', 't2_00000017', 'https://reddit.com', 'SubReddit', '', 0, true, false);
- 
+
+-- +goose Down
+DELETE FROM post;
