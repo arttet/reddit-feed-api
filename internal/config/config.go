@@ -22,7 +22,7 @@ func GetConfigInstance() Config {
 	return Config{}
 }
 
-// Database - contains all parameters database connection.
+// Database contains all parameters database connection.
 type Database struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
@@ -33,7 +33,7 @@ type Database struct {
 	Driver   string `yaml:"driver"`
 }
 
-// GRPC - contains parameter address gRPC.
+// GRPC contains parameter address gRPC.
 type GRPC struct {
 	Port              int    `yaml:"port"`
 	MaxConnectionIdle int64  `yaml:"maxConnectionIdle"`
@@ -42,7 +42,7 @@ type GRPC struct {
 	Host              string `yaml:"host"`
 }
 
-// REST - contains parameter rest json connection.
+// REST contains parameter REST JSON connection.
 type REST struct {
 	Port int    `yaml:"port"`
 	Host string `yaml:"host"`
@@ -58,7 +58,7 @@ type Project struct {
 	CommitHash  string
 }
 
-// Config - contains all configuration parameters in config package.
+// Config contains all configuration parameters in the config package.
 type Config struct {
 	Project  Project  `yaml:"project"`
 	GRPC     GRPC     `yaml:"grpc"`
@@ -66,7 +66,7 @@ type Config struct {
 	Database Database `yaml:"database"`
 }
 
-// ReadConfigYML - read configurations from file and init instance Config.
+// ReadConfigYML reads configurations from file and inits instance Config.
 func ReadConfigYML(configYML string) error {
 	if cfg != nil {
 		return nil

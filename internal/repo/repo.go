@@ -3,17 +3,12 @@ package repo
 import (
 	"context"
 	"database/sql"
-	"errors"
 
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/model"
+	"github.com/arttet/reddit-feed-api/internal/model"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 )
-
-const tableName = "post"
-
-var ErrPostNotFound = errors.New("post not found")
 
 type Repo interface {
 	CreatePosts(ctx context.Context, posts []model.Post) (int64, error)
@@ -27,22 +22,28 @@ func NewRepo(db *sqlx.DB) Repo {
 	}
 }
 
+const tableName = "post"
+
+var insertColumns = []string{
+	"title",
+	"author",
+	"link",
+	"subreddit",
+	"content",
+	"score",
+	"promoted",
+	"not_safe_for_work",
+}
+
+var selectColumns = append([]string{"id"}, insertColumns...)
+
 type repo struct {
 	db *sqlx.DB
 }
 
 func (r *repo) CreatePosts(ctx context.Context, posts []model.Post) (int64, error) {
 	query := squirrel.Insert(tableName).
-		Columns(
-			"title",
-			"author",
-			"link",
-			"subreddit",
-			"content",
-			"score",
-			"promoted",
-			"not_safe_for_work",
-		).
+		Columns(insertColumns...).
 		RunWith(r.db).
 		PlaceholderFormat(squirrel.Dollar)
 
@@ -68,17 +69,7 @@ func (r *repo) CreatePosts(ctx context.Context, posts []model.Post) (int64, erro
 }
 
 func (r *repo) ListPosts(ctx context.Context, limit uint64, offset uint64) ([]model.Post, error) {
-	query := squirrel.Select(
-		"id",
-		"title",
-		"author",
-		"link",
-		"subreddit",
-		"content",
-		"score",
-		"promoted",
-		"not_safe_for_work",
-	).
+	query := squirrel.Select(selectColumns...).
 		From(tableName).
 		OrderBy("score DESC").
 		Limit(limit).
@@ -88,51 +79,28 @@ func (r *repo) ListPosts(ctx context.Context, limit uint64, offset uint64) ([]mo
 
 	rows, err := query.QueryContext(ctx)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrPostNotFound
-		}
 		return nil, err
 	}
 	defer rows.Close()
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	posts := make([]model.Post, 0, 16)
+	posts := make([]model.Post, 0, limit)
 	for rows.Next() {
 		var post model.Post
-		if err := rows.Scan(
-			&post.ID,
-			&post.Title,
-			&post.Author,
-			&post.Link,
-			&post.Subreddit,
-			&post.Content,
-			&post.Score,
-			&post.Promoted,
-			&post.NotSafeForWork,
-		); err != nil {
+		if err := readRow(rows, &post); err != nil {
 			return nil, err
 		}
 		posts = append(posts, post)
+	}
+
+	if len(posts) == 0 {
+		return nil, sql.ErrNoRows
 	}
 
 	return posts, nil
 }
 
 func (r *repo) PromotedPost(ctx context.Context) (*model.Post, error) {
-	query := squirrel.Select(
-		"id",
-		"title",
-		"author",
-		"link",
-		"subreddit",
-		"content",
-		"score",
-		"promoted",
-		"not_safe_for_work",
-	).
+	query := squirrel.Select(selectColumns...).
 		From(tableName).
 		Where(squirrel.Eq{"promoted": true}).
 		RunWith(r.db).
@@ -142,35 +110,33 @@ func (r *repo) PromotedPost(ctx context.Context) (*model.Post, error) {
 
 	rows, err := query.QueryContext(ctx)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrPostNotFound
-		}
 		return nil, err
 	}
 	defer rows.Close()
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
 	var promotedPost model.Post
 	if rows.Next() {
-		if err := rows.Scan(
-			&promotedPost.ID,
-			&promotedPost.Title,
-			&promotedPost.Author,
-			&promotedPost.Link,
-			&promotedPost.Subreddit,
-			&promotedPost.Content,
-			&promotedPost.Score,
-			&promotedPost.Promoted,
-			&promotedPost.NotSafeForWork,
-		); err != nil {
+		if err := readRow(rows, &promotedPost); err != nil {
 			return nil, err
 		}
 	} else {
-		return nil, ErrPostNotFound
+		return nil, sql.ErrNoRows
 	}
 
 	return &promotedPost, nil
+}
+
+func readRow(rows *sql.Rows, post *model.Post) error {
+	err := rows.Scan(
+		&post.ID,
+		&post.Title,
+		&post.Author,
+		&post.Link,
+		&post.Subreddit,
+		&post.Content,
+		&post.Score,
+		&post.Promoted,
+		&post.NotSafeForWork,
+	)
+	return err
 }

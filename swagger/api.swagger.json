@@ -130,10 +130,10 @@
         "author": {
           "type": "string"
         },
-        "link": {
+        "subreddit": {
           "type": "string"
         },
-        "subreddit": {
+        "link": {
           "type": "string"
         },
         "content": {
