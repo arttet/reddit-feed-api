@@ -2,28 +2,32 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/model"
-	"github.com/arttet/reddit-feed-api/internal/reddit-feed-api/repo"
-	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
+	"github.com/arttet/reddit-feed-api/internal/model"
+	"github.com/arttet/reddit-feed-api/internal/repo"
 
 	"github.com/rs/zerolog/log"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
 )
 
 type api struct {
 	pb.UnimplementedRedditFeedAPIServiceServer
-	repo      repo.Repo
-	chunkSize uint
+	repo          repo.Repo
+	chunkSize     uint
+	maxCountPosts uint64
 }
 
 func NewRedditFeedAPI(r repo.Repo, chunkSize uint) pb.RedditFeedAPIServiceServer {
 	return &api{
-		repo:      r,
-		chunkSize: chunkSize,
+		repo:          r,
+		chunkSize:     chunkSize,
+		maxCountPosts: 27,
 	}
 }
 
@@ -37,15 +41,6 @@ func (a *api) CreatePostsV1(
 
 	if err := request.Validate(); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	for i := range request.Posts {
-		emptyLink := request.Posts[i].Link == ""
-		emptyContent := request.Posts[i].Content == ""
-
-		if (emptyLink && emptyContent) || (!emptyLink && !emptyContent) {
-			return nil, status.Error(codes.InvalidArgument, "a post cannot have both a link and content populated")
-		}
 	}
 
 	var numberOfCreatedPosts int64
@@ -62,9 +57,9 @@ func (a *api) CreatePostsV1(
 			for i < end {
 				posts[j].Title = request.Posts[i].Title
 				posts[j].Author = request.Posts[i].Author
-				posts[j].Link = request.Posts[i].Link
+				posts[j].Link = request.Posts[i].GetLink()
 				posts[j].Subreddit = request.Posts[i].Subreddit
-				posts[j].Content = request.Posts[i].Content
+				posts[j].Content = request.Posts[i].GetContent()
 				posts[j].Score = request.Posts[i].Score
 				posts[j].Promoted = request.Posts[i].Promoted
 				posts[j].NotSafeForWork = request.Posts[i].NotSafeForWork
@@ -78,6 +73,9 @@ func (a *api) CreatePostsV1(
 
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to insert the data")
+			if errors.Is(err, sql.ErrConnDone) {
+				return nil, status.Error(codes.Unavailable, err.Error())
+			}
 			return nil, status.Error(codes.ResourceExhausted, err.Error())
 		}
 
@@ -103,39 +101,64 @@ func (a *api) GenerateFeedV1(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	const maxCountPosts = 27
-
-	posts, err := a.repo.ListPosts(ctx, maxCountPosts, maxCountPosts*(request.PageId-1))
+	posts, err := a.repo.ListPosts(ctx, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
 	if err != nil {
-		if errors.Is(err, repo.ErrPostNotFound) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 
-		log.Error().Err(err).Msg("Failed to fill the data")
+		log.Error().Err(err).Msg("Failed to get the data")
+		if errors.Is(err, sql.ErrConnDone) {
+			return nil, status.Error(codes.Unavailable, err.Error())
+		}
 		return nil, status.Error(codes.ResourceExhausted, err.Error())
 	}
 
-	n := len(posts)
-	var promotedPost *model.Post
-	if n >= 3 {
-		promotedPost, err = a.repo.PromotedPost(ctx)
-		log.Warn().Err(err).Msg("Failed to find a promoted post")
+	response := &pb.GenerateFeedV1Response{
+		Posts: a.filterPosts(ctx, posts),
 	}
 
-	counter := 0
-	list := make([]*pb.Post, 0, n)
+	return response, nil
+}
 
-	insert := func(post model.Post) {
+func (a *api) filterPosts(
+	ctx context.Context,
+	posts []model.Post,
+) (
+	list []*pb.Post,
+) {
+
+	n := len(posts)
+
+	var err error
+	var promotedPost *model.Post
+
+	if n >= 3 {
+		promotedPost, err = a.repo.PromotedPost(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to find a promoted post")
+		}
+	}
+
+	list = make([]*pb.Post, 0, n)
+	counter := 0
+
+	pushBack := func(post model.Post) {
 		result := &pb.Post{
 			Title:          post.Title,
 			Author:         post.Author,
-			Link:           post.Link,
 			Subreddit:      post.Subreddit,
-			Content:        post.Content,
 			Score:          post.Score,
 			Promoted:       post.Promoted,
 			NotSafeForWork: post.NotSafeForWork,
 		}
+
+		if post.Link != "" {
+			result.PostType = &pb.Post_Link{Link: post.Link}
+		} else {
+			result.PostType = &pb.Post_Content{Content: post.Content}
+		}
+
 		list = append(list, result)
 		counter++
 	}
@@ -146,7 +169,7 @@ func (a *api) GenerateFeedV1(
 		}
 
 		if promotedPost != nil && (counter == 1 || counter == 15) && !posts[i].NotSafeForWork && !posts[i-1].NotSafeForWork {
-			insert(*promotedPost)
+			pushBack(*promotedPost)
 		}
 
 		if post.Promoted && counter > 0 && list[counter-1].NotSafeForWork {
@@ -157,12 +180,8 @@ func (a *api) GenerateFeedV1(
 			continue
 		}
 
-		insert(post)
+		pushBack(post)
 	}
 
-	response := &pb.GenerateFeedV1Response{
-		Posts: list,
-	}
-
-	return response, nil
+	return list
 }

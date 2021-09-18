@@ -377,21 +377,7 @@ func (m *Post) Validate() error {
 		}
 	}
 
-	if m.GetLink() != "" {
-
-		if _, err := url.Parse(m.GetLink()); err != nil {
-			return PostValidationError{
-				field:  "Link",
-				reason: "value must be a valid URI",
-				cause:  err,
-			}
-		}
-
-	}
-
 	// no validation rules for Subreddit
-
-	// no validation rules for Content
 
 	if m.GetScore() < 0 {
 		return PostValidationError{
@@ -403,6 +389,23 @@ func (m *Post) Validate() error {
 	// no validation rules for Promoted
 
 	// no validation rules for NotSafeForWork
+
+	switch m.PostType.(type) {
+
+	case *Post_Link:
+
+		if _, err := url.Parse(m.GetLink()); err != nil {
+			return PostValidationError{
+				field:  "Link",
+				reason: "value must be a valid URI",
+				cause:  err,
+			}
+		}
+
+	case *Post_Content:
+		// no validation rules for Content
+
+	}
 
 	return nil
 }
