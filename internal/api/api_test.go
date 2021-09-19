@@ -4,9 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/arttet/reddit-feed-api/internal/api"
+	"github.com/arttet/reddit-feed-api/internal/data"
 	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/repo"
 
@@ -42,7 +45,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 		ctx = context.Background()
 		repository = repo.NewRepo(sqlxDB)
-		server = api.NewRedditFeedAPI(repository, 1024)
+		server = api.NewRedditFeedAPI(repository)
 	})
 
 	JustBeforeEach(func() {
@@ -58,74 +61,94 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 	Describe("creating new posts", func() {
 		var (
-			values   []driver.Value
-			posts    []*pb.Post
 			request  *pb.CreatePostsV1Request
 			response *pb.CreatePostsV1Response
+			testData = testDataPost
 		)
 
-		BeforeEach(func() {
-			values = make([]driver.Value, 0, reflect.TypeOf(model.Post{}).NumField()*len(testData.Posts))
-			for _, post := range testData.Posts {
-				values = append(values,
-					post.Title,
-					post.Author,
-					post.Link,
-					post.Subreddit,
-					post.Content,
-					post.Score,
-					post.Promoted,
-					post.NotSafeForWork,
-				)
-			}
-
-			posts = make([]*pb.Post, len(testData.Posts))
-			for i, post := range testData.Posts {
-				posts[i] = &pb.Post{
-					Title:          post.Title,
-					Author:         post.Author,
-					Subreddit:      post.Subreddit,
-					Score:          post.Score,
-					Promoted:       post.Promoted,
-					NotSafeForWork: post.NotSafeForWork,
-				}
-
-				if post.Link != "" {
-					posts[i].PostType = &pb.Post_Link{
-						Link: post.Link,
-					}
-				} else {
-					posts[i].PostType = &pb.Post_Content{
-						Content: post.Content,
-					}
-				}
-			}
-		})
-
-		Context("when creates successfully", func() {
+		Describe("using a database", func() {
 			var (
-				lastInsertID int64
-				rowsAffected int64
+				exec   *sqlmock.ExpectedExec
+				values []driver.Value
+				posts  []*pb.Post
 			)
 
 			BeforeEach(func() {
-				lastInsertID = int64(len(testData.Posts))
-				rowsAffected = lastInsertID
-
-				mock.ExpectExec("INSERT INTO post").
-					WithArgs(values...).
-					WillReturnResult(sqlmock.NewResult(lastInsertID, rowsAffected))
-
-				request = &pb.CreatePostsV1Request{
-					Posts: posts,
+				values = make([]driver.Value, 0, reflect.TypeOf(model.Post{}).NumField()*len(testData.Posts))
+				for _, post := range testData.Posts {
+					values = append(values,
+						post.Title,
+						post.Author,
+						post.Link,
+						post.Subreddit,
+						post.Content,
+						post.Score,
+						post.Promoted,
+						post.NotSafeForWork,
+					)
 				}
 
-				response, err = server.CreatePostsV1(ctx, request)
+				posts = make([]*pb.Post, 0, len(testData.Posts))
+				for _, post := range testData.Posts {
+					result := &pb.Post{
+						Title:          post.Title,
+						Author:         post.Author,
+						Subreddit:      post.Subreddit,
+						Score:          post.Score,
+						Promoted:       post.Promoted,
+						NotSafeForWork: post.NotSafeForWork,
+					}
+					if post.Link != "" {
+						result.PostType = &pb.Post_Link{Link: post.Link}
+					} else {
+						result.PostType = &pb.Post_Content{Content: post.Content}
+					}
+					posts = append(posts, result)
+				}
+
+				exec = mock.ExpectExec(fmt.Sprintf("INSERT INTO %s", repo.TableName)).
+					WithArgs(values...)
 			})
 
-			It("should return a number of the created posts correctly", func() {
-				Expect(response.NumberOfCreatedPosts).Should(BeEquivalentTo(len(testData.Posts)))
-				Expect(err).Should(BeNil())
+			Context("when creates successfully", func() {
+				var (
+					lastInsertID int64
+					rowsAffected int64
+				)
+
+				BeforeEach(func() {
+					lastInsertID = int64(len(testData.Posts))
+					rowsAffected = lastInsertID
+					exec.WillReturnResult(sqlmock.NewResult(lastInsertID, rowsAffected))
+
+					request = &pb.CreatePostsV1Request{
+						Posts: posts,
+					}
+
+					response, err = server.CreatePostsV1(ctx, request)
+				})
+
+				It("should return a number of the created posts correctly", func() {
+					Expect(response.NumberOfCreatedPosts).Should(BeEquivalentTo(len(testData.Posts)))
+					Expect(err).Should(BeNil())
+				})
+			})
+
+			Context("when fails to create because of a database connection error", func() {
+				BeforeEach(func() {
+					exec.WillReturnError(sql.ErrConnDone)
+
+					request = &pb.CreatePostsV1Request{
+						Posts: posts,
+					}
+
+					response, err = server.CreatePostsV1(ctx, request)
+				})
+
+				It("should return an empty response", func() {
+					Expect(response).Should(BeNil())
+					Expect(status.Convert(err).Code()).Should(Equal(codes.Unavailable))
+				})
 			})
 		})
 
@@ -134,7 +157,6 @@ var _ = Describe("Reddit Feed API Server", func() {
 				request = &pb.CreatePostsV1Request{
 					Posts: nil,
 				}
-
 				response, err = server.CreatePostsV1(ctx, request)
 			})
 
@@ -157,15 +179,10 @@ var _ = Describe("Reddit Feed API Server", func() {
 						Promoted:       post.Promoted,
 						NotSafeForWork: post.NotSafeForWork,
 					}
-
 					if post.Link != "" {
-						result.PostType = &pb.Post_Link{
-							Link: post.Link,
-						}
+						result.PostType = &pb.Post_Link{Link: post.Link}
 					} else {
-						result.PostType = &pb.Post_Content{
-							Content: post.Content,
-						}
+						result.PostType = &pb.Post_Content{Content: post.Content}
 					}
 
 					request = &pb.CreatePostsV1Request{
@@ -181,23 +198,197 @@ var _ = Describe("Reddit Feed API Server", func() {
 				})
 			}
 		})
+	})
 
-		Context("when fails to create because of a database connection error", func() {
-			BeforeEach(func() {
-				mock.ExpectExec("INSERT INTO post").
-					WithArgs(values...).
-					WillReturnError(sql.ErrConnDone)
+	// ////////////////////////////////////////////////////////////////////////
 
-				request = &pb.CreatePostsV1Request{
-					Posts: posts,
+	Describe("generating a new feed", func() {
+		const (
+			feedLimit     = 27
+			promotedLimit = 1
+			offset        = 0
+		)
+
+		var (
+			request  *pb.GenerateFeedV1Request
+			response *pb.GenerateFeedV1Response
+		)
+
+		Describe("using a database", func() {
+			Context("when generates successfully", func() {
+				filenames := []string{"feed1.yaml", "feed2.yaml"}
+				for _, feed := range filenames {
+					feed := feed
+					var (
+						rows     *sqlmock.Rows
+						testData *data.TestData
+						query    string
+					)
+
+					BeforeEach(func() {
+						filename := fmt.Sprintf("../data/data/%s", feed)
+						testData = data.LoadTestData(filename)
+						Expect(testData).ShouldNot(BeNil())
+
+						rows = sqlmock.NewRows(repo.SelectColumns)
+						for i, post := range testData.Posts {
+							if i == feedLimit {
+								break
+							}
+
+							rows.AddRow(
+								post.ID,
+								post.Title,
+								post.Author,
+								post.Link,
+								post.Subreddit,
+								post.Content,
+								post.Score,
+								post.Promoted,
+								post.NotSafeForWork,
+							)
+						}
+						query = fmt.Sprintf("SELECT %s FROM %s ORDER BY score DESC LIMIT %d OFFSET %d",
+							strings.Join(repo.SelectColumns, ", "),
+							repo.TableName,
+							feedLimit,
+							offset,
+						)
+					})
+
+					Context("with a promoted post", func() {
+						BeforeEach(func() {
+							mock.ExpectQuery(query).WillReturnRows(rows)
+
+							promotedQuery := fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
+								strings.Join(repo.SelectColumns, ", "),
+								repo.TableName,
+							)
+
+							promotedRows := sqlmock.NewRows(repo.SelectColumns)
+							for i, post := range testData.PromotedPosts {
+								if i == promotedLimit {
+									break
+								}
+
+								promotedRows.AddRow(
+									post.ID,
+									post.Title,
+									post.Author,
+									post.Link,
+									post.Subreddit,
+									post.Content,
+									post.Score,
+									post.Promoted,
+									post.NotSafeForWork,
+								)
+							}
+
+							mock.ExpectQuery(promotedQuery).
+								WithArgs(true).
+								WillReturnRows(rows)
+
+							request = &pb.GenerateFeedV1Request{
+								PageId: 1,
+							}
+
+							response, err = server.GenerateFeedV1(ctx, request)
+						})
+
+						It("should return a number of the created posts correctly", func() {
+							Expect(response.Posts).ShouldNot(BeEmpty())
+							Expect(err).Should(BeNil())
+						})
+					})
+
+					Context("without a promoted post", func() {
+						BeforeEach(func() {
+							mock.ExpectQuery(query).WillReturnRows(rows)
+
+							query = fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
+								strings.Join(repo.SelectColumns, ", "),
+								repo.TableName,
+							)
+							mock.ExpectQuery(query).WithArgs(true).
+								WillReturnError(sql.ErrNoRows)
+
+							request = &pb.GenerateFeedV1Request{
+								PageId: 1,
+							}
+
+							response, err = server.GenerateFeedV1(ctx, request)
+						})
+
+						It("should return a number of the created posts correctly", func() {
+							Expect(response.Posts).ShouldNot(BeEmpty())
+							Expect(err).Should(BeNil())
+						})
+					})
 				}
+			})
 
-				response, err = server.CreatePostsV1(ctx, request)
+			Context("when generates unsuccessfully", func() {
+				var (
+					exec *sqlmock.ExpectedQuery
+				)
+
+				BeforeEach(func() {
+					query := fmt.Sprintf("SELECT %s FROM %s ORDER BY score DESC LIMIT %d OFFSET %d",
+						strings.Join(repo.SelectColumns, ", "),
+						repo.TableName,
+						feedLimit,
+						offset,
+					)
+					exec = mock.ExpectQuery(query)
+				})
+
+				Context("when fails to generate because of a database connection error", func() {
+					BeforeEach(func() {
+						exec.WillReturnError(sql.ErrConnDone)
+
+						request = &pb.GenerateFeedV1Request{
+							PageId: 1,
+						}
+
+						response, err = server.GenerateFeedV1(ctx, request)
+					})
+
+					It("should return an empty response", func() {
+						Expect(response).Should(BeNil())
+						Expect(status.Convert(err).Code()).Should(Equal(codes.Unavailable))
+					})
+				})
+
+				Context("when fails to generate because of a not found error", func() {
+					BeforeEach(func() {
+						exec.WillReturnError(sql.ErrNoRows)
+
+						request = &pb.GenerateFeedV1Request{
+							PageId: 1,
+						}
+
+						response, err = server.GenerateFeedV1(ctx, request)
+					})
+
+					It("should return an empty response", func() {
+						Expect(response).Should(BeNil())
+						Expect(status.Convert(err).Code()).Should(Equal(codes.NotFound))
+					})
+				})
+			})
+		})
+
+		Context("when fails to generate because of an empty argument", func() {
+			BeforeEach(func() {
+				request = &pb.GenerateFeedV1Request{
+					PageId: 0,
+				}
+				response, err = server.GenerateFeedV1(ctx, request)
 			})
 
 			It("should return an empty response", func() {
 				Expect(response).Should(BeNil())
-				Expect(status.Convert(err).Code()).Should(Equal(codes.Unavailable))
+				Expect(status.Convert(err).Code()).Should(Equal(codes.InvalidArgument))
 			})
 		})
 	})

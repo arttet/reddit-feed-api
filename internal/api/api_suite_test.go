@@ -9,13 +9,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var testData *data.TestData
+var testDataPost *data.TestData
 
 func TestAPI(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	testData = data.LoadTestData("../data/data/posts.yaml")
-	Expect(testData).ShouldNot(BeNil())
+	testDataPost = data.LoadTestData("../data/data/posts.yaml")
+	Expect(testDataPost).ShouldNot(BeNil())
 
 	RunSpecs(t, "API Suite")
 }

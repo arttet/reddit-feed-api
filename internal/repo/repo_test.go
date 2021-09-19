@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/repo"
@@ -19,7 +20,8 @@ import (
 
 var _ = Describe("Repo", func() {
 	var (
-		err error
+		err    error
+		errRow = fmt.Errorf("row error")
 
 		mock sqlmock.Sqlmock
 
@@ -71,7 +73,7 @@ var _ = Describe("Repo", func() {
 				)
 			}
 
-			exec = mock.ExpectExec("INSERT INTO post").WithArgs(values...)
+			exec = mock.ExpectExec(fmt.Sprintf("INSERT INTO %s", repo.TableName)).WithArgs(values...)
 		})
 
 		Context("when creates successfully", func() {
@@ -94,7 +96,7 @@ var _ = Describe("Repo", func() {
 			})
 		})
 
-		Context("when fails to create", func() {
+		Context("when fails to create because of a connection done error", func() {
 			BeforeEach(func() {
 				exec.WillReturnError(sql.ErrConnDone)
 				numberOfTheCreatedPosts, err = repository.CreatePosts(ctx, testData.Posts)
@@ -111,36 +113,26 @@ var _ = Describe("Repo", func() {
 
 	Describe("lists posts", func() {
 		const (
-			limit  = 10
+			limit  = 27
 			offset = 0
 		)
 
 		var (
 			exec   *sqlmock.ExpectedQuery
-			result []model.Post
 			rows   *sqlmock.Rows
+			result []model.Post
 		)
 
 		BeforeEach(func() {
-			query := fmt.Sprintf("SELECT (.+) FROM post ORDER BY %s DESC LIMIT %d OFFSET %d",
-				"score",
+			query := fmt.Sprintf("SELECT %s FROM %s ORDER BY score DESC LIMIT %d OFFSET %d",
+				strings.Join(repo.SelectColumns, ", "),
+				repo.TableName,
 				limit,
 				offset,
 			)
 			exec = mock.ExpectQuery(query)
 
-			rows = sqlmock.NewRows([]string{
-				"id",
-				"title",
-				"author",
-				"link",
-				"subreddit",
-				"content",
-				"score",
-				"promoted",
-				"not_safe_for_work",
-			})
-
+			rows = sqlmock.NewRows(repo.SelectColumns)
 			for i, post := range testData.Posts {
 				if i == limit {
 					break
@@ -172,7 +164,19 @@ var _ = Describe("Repo", func() {
 			})
 		})
 
-		Context("when a database is empty", func() {
+		Context("when fails to list because of a connection done error", func() {
+			BeforeEach(func() {
+				exec.WillReturnError(sql.ErrConnDone)
+				result, err = repository.ListPosts(ctx, limit, offset)
+			})
+
+			It("should return an empty list of the posts", func() {
+				Expect(result).Should(BeNil())
+				Expect(err).Should(MatchError(sql.ErrConnDone))
+			})
+		})
+
+		Context("when fails to list because of a no rows error", func() {
 			BeforeEach(func() {
 				exec.WillReturnError(sql.ErrNoRows)
 				result, err = repository.ListPosts(ctx, limit, offset)
@@ -184,15 +188,104 @@ var _ = Describe("Repo", func() {
 			})
 		})
 
-		Context("when fails to list", func() {
+		Context("when fails to get because of a row error", func() {
 			BeforeEach(func() {
-				exec.WillReturnError(sql.ErrConnDone)
+				exec.WillReturnRows(rows.RowError(0, errRow))
 				result, err = repository.ListPosts(ctx, limit, offset)
 			})
 
-			It("should return an empty list of the posts", func() {
+			It("should return an empty promoted post", func() {
+				Expect(result).Should(BeNil())
+				Expect(err).Should(MatchError(errRow))
+			})
+		})
+	})
+
+	// ////////////////////////////////////////////////////////////////////////
+
+	Describe("getting a promoted post", func() {
+		const (
+			limit = 1
+		)
+
+		var (
+			exec   *sqlmock.ExpectedQuery
+			rows   *sqlmock.Rows
+			result *model.Post
+		)
+
+		BeforeEach(func() {
+			query := fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
+				strings.Join(repo.SelectColumns, ", "),
+				repo.TableName,
+			)
+			exec = mock.ExpectQuery(query).WithArgs(true)
+
+			rows = sqlmock.NewRows(repo.SelectColumns)
+			for i, post := range testData.PromotedPosts {
+				if i == limit {
+					break
+				}
+
+				rows.AddRow(
+					post.ID,
+					post.Title,
+					post.Author,
+					post.Link,
+					post.Subreddit,
+					post.Content,
+					post.Score,
+					post.Promoted,
+					post.NotSafeForWork,
+				)
+			}
+		})
+
+		Context("when gets successfully", func() {
+			BeforeEach(func() {
+				exec.WillReturnRows(rows)
+				result, err = repository.GetPromotedPost(ctx)
+			})
+
+			It("should populate the slice correctly", func() {
+				Expect(result).ShouldNot(BeNil())
+				Expect(err).Should(BeNil())
+			})
+		})
+
+		Context("when fails to get because of a connection done error", func() {
+			BeforeEach(func() {
+				exec.WillReturnError(sql.ErrConnDone)
+				result, err = repository.GetPromotedPost(ctx)
+			})
+
+			It("should return an empty promoted post", func() {
 				Expect(result).Should(BeNil())
 				Expect(err).Should(MatchError(sql.ErrConnDone))
+			})
+		})
+
+		Context("when fails to get because of a no rows error", func() {
+			BeforeEach(func() {
+				exec.WillReturnError(sql.ErrNoRows)
+				result, err = repository.GetPromotedPost(ctx)
+			})
+
+			It("should return an empty promoted post", func() {
+				Expect(result).Should(BeNil())
+				Expect(err).Should(MatchError(sql.ErrNoRows))
+			})
+		})
+
+		Context("when fails to get because of a row error", func() {
+			BeforeEach(func() {
+				exec.WillReturnRows(rows.RowError(0, errRow))
+				result, err = repository.GetPromotedPost(ctx)
+			})
+
+			It("should return an empty promoted post", func() {
+				Expect(result).Should(BeNil())
+				Expect(err).Should(MatchError(errRow))
 			})
 		})
 	})
