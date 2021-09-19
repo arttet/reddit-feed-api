@@ -109,7 +109,7 @@ func runGRPC(r repo.Repo, host string, port int, debug bool) error {
 	if debug {
 		reflection.Register(server)
 	}
-	pb.RegisterRedditFeedAPIServiceServer(server, api.NewRedditFeedAPI(r, 1024))
+	pb.RegisterRedditFeedAPIServiceServer(server, api.NewRedditFeedAPI(r))
 
 	log.Info().Msgf("Listening GRPC server on %s", listenOn)
 	if err := server.Serve(listener); err != nil {

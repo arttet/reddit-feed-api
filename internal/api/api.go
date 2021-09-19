@@ -19,14 +19,12 @@ import (
 type api struct {
 	pb.UnimplementedRedditFeedAPIServiceServer
 	repo          repo.Repo
-	chunkSize     uint
 	maxCountPosts uint64
 }
 
-func NewRedditFeedAPI(r repo.Repo, chunkSize uint) pb.RedditFeedAPIServiceServer {
+func NewRedditFeedAPI(r repo.Repo) pb.RedditFeedAPIServiceServer {
 	return &api{
 		repo:          r,
-		chunkSize:     chunkSize,
 		maxCountPosts: 27,
 	}
 }
@@ -44,42 +42,25 @@ func (a *api) CreatePostsV1(
 	}
 
 	var numberOfCreatedPosts int64
-	posts := make([]model.Post, a.chunkSize)
-
-	for i, n := uint(0), uint(len(request.Posts)); i < n; i += a.chunkSize {
-		end := i + a.chunkSize
-		if end > n {
-			end = n
+	posts := make([]model.Post, 0, len(request.Posts))
+	for i := range request.Posts {
+		post := model.Post{
+			Title:          request.Posts[i].Title,
+			Author:         request.Posts[i].Author,
+			Link:           request.Posts[i].GetLink(),
+			Subreddit:      request.Posts[i].Subreddit,
+			Content:        request.Posts[i].GetContent(),
+			Score:          request.Posts[i].Score,
+			Promoted:       request.Posts[i].Promoted,
+			NotSafeForWork: request.Posts[i].NotSafeForWork,
 		}
+		posts = append(posts, post)
+	}
 
-		number, err := func() (int64, error) {
-			var j int
-			for i < end {
-				posts[j].Title = request.Posts[i].Title
-				posts[j].Author = request.Posts[i].Author
-				posts[j].Link = request.Posts[i].GetLink()
-				posts[j].Subreddit = request.Posts[i].Subreddit
-				posts[j].Content = request.Posts[i].GetContent()
-				posts[j].Score = request.Posts[i].Score
-				posts[j].Promoted = request.Posts[i].Promoted
-				posts[j].NotSafeForWork = request.Posts[i].NotSafeForWork
-
-				i++
-				j++
-			}
-
-			return a.repo.CreatePosts(ctx, posts[:j])
-		}()
-
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to insert the data")
-			if errors.Is(err, sql.ErrConnDone) {
-				return nil, status.Error(codes.Unavailable, err.Error())
-			}
-			return nil, status.Error(codes.ResourceExhausted, err.Error())
-		}
-
-		numberOfCreatedPosts += number
+	numberOfCreatedPosts, err := a.repo.CreatePosts(ctx, posts)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to insert the data")
+		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 
 	response := &pb.CreatePostsV1Response{
@@ -108,10 +89,7 @@ func (a *api) GenerateFeedV1(
 		}
 
 		log.Error().Err(err).Msg("Failed to get the data")
-		if errors.Is(err, sql.ErrConnDone) {
-			return nil, status.Error(codes.Unavailable, err.Error())
-		}
-		return nil, status.Error(codes.ResourceExhausted, err.Error())
+		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 
 	response := &pb.GenerateFeedV1Response{
@@ -134,7 +112,7 @@ func (a *api) filterPosts(
 	var promotedPost *model.Post
 
 	if n >= 3 {
-		promotedPost, err = a.repo.PromotedPost(ctx)
+		promotedPost, err = a.repo.GetPromotedPost(ctx)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to find a promoted post")
 		}
@@ -152,7 +130,6 @@ func (a *api) filterPosts(
 			Promoted:       post.Promoted,
 			NotSafeForWork: post.NotSafeForWork,
 		}
-
 		if post.Link != "" {
 			result.PostType = &pb.Post_Link{Link: post.Link}
 		} else {

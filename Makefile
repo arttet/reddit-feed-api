@@ -8,17 +8,17 @@ export GO111MODULE=on
 ###############################################################################
 
 # https://github.com/bufbuild/buf/releases
-BUF_VERSION=v0.56.0
+BUF_VERSION=v1.0.0-rc1
 
 OS_NAME=$(shell uname -s)
 OS_ARCH=$(shell uname -m)
 GOBIN?=$(GOPATH)/bin
 
-ifeq ("NT","$(findstring NT,$(OS_NAME))")
+ifeq ("NT", "$(findstring NT,$(OS_NAME))")
 OS_NAME=Windows
 endif
 
-ifeq ("Windows","$(OS_NAME)")
+ifeq ("Windows", "$(OS_NAME)")
 OS_ARCH:=$(addsuffix .exe,$(OS_ARCH))
 endif
 
@@ -31,6 +31,9 @@ SERVICE_PATH=github.com/arttet/reddit-feed-api
 
 .PHONY: build
 build: generate .build
+ifeq ("NT", "$(findstring NT,$(shell uname -s))")
+	mv ./bin/$(SERVICE_NAME) ./bin/$(SERVICE_NAME).exe
+endif
 
 .PHONY: run
 run:
@@ -56,7 +59,7 @@ cover:
 
 .PHONY: grpcui
 grpcui:
-		grpcui -plaintext 0.0.0.0:8082
+	grpcui -plaintext 0.0.0.0:8082
 
 ###############################################################################
 
@@ -107,4 +110,3 @@ generate: .generate
 			-X '$(SERVICE_PATH)/internal/config.commitHash=$(COMMIT_HASH)' \
 		" \
 		-o ./bin/reddit-feed-api ./cmd/reddit-feed-api/main.go
-	mv ./bin/reddit-feed-api ./bin/reddit-feed-api.exe
