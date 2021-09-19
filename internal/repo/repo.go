@@ -13,7 +13,7 @@ import (
 type Repo interface {
 	CreatePosts(ctx context.Context, posts []model.Post) (int64, error)
 	ListPosts(ctx context.Context, limit uint64, offset uint64) ([]model.Post, error)
-	PromotedPost(ctx context.Context) (*model.Post, error)
+	GetPromotedPost(ctx context.Context) (*model.Post, error)
 }
 
 func NewRepo(db *sqlx.DB) Repo {
@@ -22,9 +22,9 @@ func NewRepo(db *sqlx.DB) Repo {
 	}
 }
 
-const tableName = "post"
+const TableName = "post"
 
-var insertColumns = []string{
+var InsertColumns = []string{
 	"title",
 	"author",
 	"link",
@@ -35,17 +35,17 @@ var insertColumns = []string{
 	"not_safe_for_work",
 }
 
-var selectColumns = append([]string{"id"}, insertColumns...)
+var SelectColumns = append([]string{"id"}, InsertColumns...)
 
 type repo struct {
 	db *sqlx.DB
 }
 
 func (r *repo) CreatePosts(ctx context.Context, posts []model.Post) (int64, error) {
-	query := squirrel.Insert(tableName).
-		Columns(insertColumns...).
-		RunWith(r.db).
-		PlaceholderFormat(squirrel.Dollar)
+	query := squirrel.Insert(TableName).
+		Columns(InsertColumns...).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(r.db)
 
 	for i := range posts {
 		query = query.Values(
@@ -69,13 +69,13 @@ func (r *repo) CreatePosts(ctx context.Context, posts []model.Post) (int64, erro
 }
 
 func (r *repo) ListPosts(ctx context.Context, limit uint64, offset uint64) ([]model.Post, error) {
-	query := squirrel.Select(selectColumns...).
-		From(tableName).
+	query := squirrel.Select(SelectColumns...).
+		From(TableName).
 		OrderBy("score DESC").
 		Limit(limit).
 		Offset(offset).
-		RunWith(r.db).
-		PlaceholderFormat(squirrel.Dollar)
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(r.db)
 
 	rows, err := query.QueryContext(ctx)
 	if err != nil {
@@ -86,27 +86,25 @@ func (r *repo) ListPosts(ctx context.Context, limit uint64, offset uint64) ([]mo
 	posts := make([]model.Post, 0, limit)
 	for rows.Next() {
 		var post model.Post
-		if err := readRow(rows, &post); err != nil {
-			return nil, err
-		}
+		scanRow(rows, &post)
 		posts = append(posts, post)
 	}
 
-	if len(posts) == 0 {
-		return nil, sql.ErrNoRows
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return posts, nil
 }
 
-func (r *repo) PromotedPost(ctx context.Context) (*model.Post, error) {
-	query := squirrel.Select(selectColumns...).
-		From(tableName).
+func (r *repo) GetPromotedPost(ctx context.Context) (*model.Post, error) {
+	query := squirrel.Select(SelectColumns...).
+		From(TableName).
 		Where(squirrel.Eq{"promoted": true}).
-		RunWith(r.db).
 		OrderBy("score DESC").
 		Limit(1).
-		PlaceholderFormat(squirrel.Dollar)
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(r.db)
 
 	rows, err := query.QueryContext(ctx)
 	if err != nil {
@@ -116,18 +114,19 @@ func (r *repo) PromotedPost(ctx context.Context) (*model.Post, error) {
 
 	var promotedPost model.Post
 	if rows.Next() {
-		if err := readRow(rows, &promotedPost); err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, sql.ErrNoRows
+		scanRow(rows, &promotedPost)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return &promotedPost, nil
 }
 
-func readRow(rows *sql.Rows, post *model.Post) error {
-	err := rows.Scan(
+func scanRow(rows *sql.Rows, post *model.Post) {
+	// nolint:errcheck
+	rows.Scan(
 		&post.ID,
 		&post.Title,
 		&post.Author,
@@ -138,5 +137,4 @@ func readRow(rows *sql.Rows, post *model.Post) error {
 		&post.Promoted,
 		&post.NotSafeForWork,
 	)
-	return err
 }

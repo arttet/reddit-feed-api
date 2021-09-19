@@ -1,0 +1,24 @@
+promotedPosts:
+  - id: 1
+    title: Promoted Post 1
+    author: t2_00000000
+    link: https://reddit.com
+    subreddit: SubReddit
+    content:
+    score: 0
+    promoted: true
+    notSafeForWork: false
+
+posts:
+  - author: t2_00000001
+    link: https://reddit.com
+    promoted: false
+    notSafeForWork: false
+
+  - author: t2_00000002
+    promoted: false
+    notSafeForWork: false
+
+  - author: t2_00000003
+    promoted: false
+    notSafeForWork: false

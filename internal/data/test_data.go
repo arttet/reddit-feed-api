@@ -11,8 +11,9 @@ import (
 )
 
 type TestData struct {
-	Posts      []model.Post `yaml:"posts"`
-	WrongPosts []model.Post `yaml:"wrongPosts"`
+	Posts         []model.Post `yaml:"posts"`
+	WrongPosts    []model.Post `yaml:"wrongPosts"`
+	PromotedPosts []model.Post `yaml:"promotedPosts"`
 }
 
 func LoadTestData(filename string) *TestData {
