@@ -29,21 +29,25 @@ var _ = Describe("Reddit Feed API Server", func() {
 	var (
 		err error
 
+		ctx context.Context
+
+		mockSQL sqlmock.Sqlmock
+
 		db     *sql.DB
 		sqlxDB *sqlx.DB
-		mock   sqlmock.Sqlmock
 
-		ctx        context.Context
 		repository repo.Repo
 		server     pb.RedditFeedAPIServiceServer
 	)
 
 	BeforeEach(func() {
-		db, mock, err = sqlmock.New()
+		ctx = context.Background()
+
+		db, mockSQL, err = sqlmock.New()
 		Expect(err).Should(BeNil())
 		sqlxDB = sqlx.NewDb(db, "sqlmock")
+		Expect(sqlxDB).ShouldNot(BeNil())
 
-		ctx = context.Background()
 		repository = repo.NewRepo(sqlxDB)
 		server = api.NewRedditFeedAPI(repository)
 	})
@@ -52,7 +56,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 	})
 
 	AfterEach(func() {
-		mock.ExpectClose()
+		mockSQL.ExpectClose()
 		err := db.Close()
 		Expect(err).Should(BeNil())
 	})
@@ -106,7 +110,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 					posts = append(posts, result)
 				}
 
-				exec = mock.ExpectExec(fmt.Sprintf("INSERT INTO %s", repo.TableName)).
+				exec = mockSQL.ExpectExec(fmt.Sprintf("INSERT INTO %s", repo.TableName)).
 					WithArgs(values...)
 			})
 
@@ -147,7 +151,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 				It("should return an empty response", func() {
 					Expect(response).Should(BeNil())
-					Expect(status.Convert(err).Code()).Should(Equal(codes.Unavailable))
+					Expect(status.Convert(err).Code()).Should(Equal(codes.Internal))
 				})
 			})
 		})
@@ -258,7 +262,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 					Context("with a promoted post", func() {
 						BeforeEach(func() {
-							mock.ExpectQuery(query).WillReturnRows(rows)
+							mockSQL.ExpectQuery(query).WillReturnRows(rows)
 
 							promotedQuery := fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
 								strings.Join(repo.SelectColumns, ", "),
@@ -284,7 +288,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 								)
 							}
 
-							mock.ExpectQuery(promotedQuery).
+							mockSQL.ExpectQuery(promotedQuery).
 								WithArgs(true).
 								WillReturnRows(rows)
 
@@ -303,13 +307,13 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 					Context("without a promoted post", func() {
 						BeforeEach(func() {
-							mock.ExpectQuery(query).WillReturnRows(rows)
+							mockSQL.ExpectQuery(query).WillReturnRows(rows)
 
 							query = fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
 								strings.Join(repo.SelectColumns, ", "),
 								repo.TableName,
 							)
-							mock.ExpectQuery(query).WithArgs(true).
+							mockSQL.ExpectQuery(query).WithArgs(true).
 								WillReturnError(sql.ErrNoRows)
 
 							request = &pb.GenerateFeedV1Request{
@@ -339,7 +343,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 						feedLimit,
 						offset,
 					)
-					exec = mock.ExpectQuery(query)
+					exec = mockSQL.ExpectQuery(query)
 				})
 
 				Context("when fails to generate because of a database connection error", func() {
@@ -355,13 +359,13 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 					It("should return an empty response", func() {
 						Expect(response).Should(BeNil())
-						Expect(status.Convert(err).Code()).Should(Equal(codes.Unavailable))
+						Expect(status.Convert(err).Code()).Should(Equal(codes.Internal))
 					})
 				})
 
 				Context("when fails to generate because of a not found error", func() {
 					BeforeEach(func() {
-						exec.WillReturnError(sql.ErrNoRows)
+						exec.WillReturnRows(sqlmock.NewRows(repo.SelectColumns))
 
 						request = &pb.GenerateFeedV1Request{
 							PageId: 1,

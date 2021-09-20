@@ -35,20 +35,20 @@ type Database struct {
 
 // GRPC contains parameter address gRPC.
 type GRPC struct {
+	Host              string `yaml:"host"`
 	Port              int    `yaml:"port"`
 	MaxConnectionIdle int64  `yaml:"maxConnectionIdle"`
 	Timeout           int64  `yaml:"timeout"`
 	MaxConnectionAge  int64  `yaml:"maxConnectionAge"`
-	Host              string `yaml:"host"`
 }
 
 // REST contains parameter REST JSON connection.
 type REST struct {
-	Port int    `yaml:"port"`
 	Host string `yaml:"host"`
+	Port int    `yaml:"port"`
 }
 
-// Project - contains all parameters project information.
+// Project contains all parameters project information.
 type Project struct {
 	Debug       bool   `yaml:"debug"`
 	Name        string `yaml:"name"`
@@ -58,12 +58,47 @@ type Project struct {
 	CommitHash  string
 }
 
+// Metrics contains all parameters metrics information.
+type Metrics struct {
+	Host string `yaml:"host"`
+	Port int    `yaml:"port"`
+	Path string `yaml:"path"`
+}
+
+// Jaeger contains all parameters metrics information.
+type Jaeger struct {
+	Host    string `yaml:"host"`
+	Port    int    `yaml:"port"`
+	Service string `yaml:"service"`
+}
+
+// Kafka contains all parameters Kafka information.
+type Kafka struct {
+	Capacity uint64   `yaml:"capacity"`
+	Topic    string   `yaml:"topic"`
+	GroupID  string   `yaml:"groupId"`
+	Brokers  []string `yaml:"brokers"`
+}
+
+// Service status config.
+type Status struct {
+	Host          string `yaml:"host"`
+	Port          int    `yaml:"port"`
+	VersionPath   string `yaml:"versionPath"`
+	LivenessPath  string `yaml:"livenessPath"`
+	ReadinessPath string `yaml:"readinessPath"`
+}
+
 // Config contains all configuration parameters in the config package.
 type Config struct {
 	Project  Project  `yaml:"project"`
 	GRPC     GRPC     `yaml:"grpc"`
 	REST     REST     `yaml:"rest"`
 	Database Database `yaml:"database"`
+	Metrics  Metrics  `yaml:"metrics"`
+	Jaeger   Jaeger   `yaml:"jaeger"`
+	Kafka    Kafka    `yaml:"kafka"`
+	Status   Status   `yaml:"status"`
 }
 
 // ReadConfigYML reads configurations from file and inits instance Config.

@@ -2,13 +2,14 @@ package api
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 
 	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/repo"
 
-	"github.com/rs/zerolog/log"
+	zerolog "github.com/rs/zerolog/log"
+
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,6 +38,12 @@ func (a *api) CreatePostsV1(
 	error,
 ) {
 
+	span, ctx := opentracing.StartSpanFromContext(ctx, "CreatePostsV1")
+	defer span.Finish()
+	span.LogFields(
+		log.Int("len", len(request.Posts)),
+	)
+
 	if err := request.Validate(); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -57,10 +64,10 @@ func (a *api) CreatePostsV1(
 		posts = append(posts, post)
 	}
 
-	numberOfCreatedPosts, err := a.repo.CreatePosts(ctx, posts)
+	numberOfCreatedPosts, err := a.repo.CreatePosts(ctx, span, posts)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to insert the data")
-		return nil, status.Error(codes.Unavailable, err.Error())
+		zerolog.Error().Err(err).Msg("Failed to insert the data")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	response := &pb.CreatePostsV1Response{
@@ -78,22 +85,28 @@ func (a *api) GenerateFeedV1(
 	error,
 ) {
 
+	span, ctx := opentracing.StartSpanFromContext(ctx, "GenerateFeedV1")
+	defer span.Finish()
+	span.LogFields(
+		log.Uint64("PageId", request.PageId),
+	)
+
 	if err := request.Validate(); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	posts, err := a.repo.ListPosts(ctx, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
+	posts, err := a.repo.ListPosts(ctx, span, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
+		zerolog.Error().Err(err).Msg("Failed to list the data")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
-		log.Error().Err(err).Msg("Failed to get the data")
-		return nil, status.Error(codes.Unavailable, err.Error())
+	if len(posts) == 0 {
+		return nil, status.Error(codes.NotFound, "a feed not found")
 	}
 
 	response := &pb.GenerateFeedV1Response{
-		Posts: a.filterPosts(ctx, posts),
+		Posts: a.filterPosts(ctx, span, posts),
 	}
 
 	return response, nil
@@ -101,10 +114,16 @@ func (a *api) GenerateFeedV1(
 
 func (a *api) filterPosts(
 	ctx context.Context,
+	parentSpan opentracing.Span,
 	posts []model.Post,
 ) (
 	list []*pb.Post,
 ) {
+
+	span := opentracing.StartSpan(
+		"filterPosts",
+		opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
 
 	n := len(posts)
 
@@ -112,9 +131,9 @@ func (a *api) filterPosts(
 	var promotedPost *model.Post
 
 	if n >= 3 {
-		promotedPost, err = a.repo.GetPromotedPost(ctx)
+		promotedPost, err = a.repo.GetPromotedPost(ctx, span)
 		if err != nil {
-			log.Warn().Err(err).Msg("Failed to find a promoted post")
+			zerolog.Warn().Err(err).Msg("Failed to find a promoted post")
 		}
 	}
 

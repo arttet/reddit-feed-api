@@ -6,14 +6,16 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/model"
 
+	"github.com/opentracing/opentracing-go"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 )
 
 type Repo interface {
-	CreatePosts(ctx context.Context, posts []model.Post) (int64, error)
-	ListPosts(ctx context.Context, limit uint64, offset uint64) ([]model.Post, error)
-	GetPromotedPost(ctx context.Context) (*model.Post, error)
+	CreatePosts(ctx context.Context, parentSpan opentracing.Span, posts []model.Post) (int64, error)
+	ListPosts(ctx context.Context, parentSpan opentracing.Span, limit uint64, offset uint64) ([]model.Post, error)
+	GetPromotedPost(ctx context.Context, parentSpan opentracing.Span) (*model.Post, error)
 }
 
 func NewRepo(db *sqlx.DB) Repo {
@@ -41,7 +43,20 @@ type repo struct {
 	db *sqlx.DB
 }
 
-func (r *repo) CreatePosts(ctx context.Context, posts []model.Post) (int64, error) {
+func (r *repo) CreatePosts(
+	ctx context.Context,
+	parentSpan opentracing.Span,
+	posts []model.Post,
+) (
+	int64,
+	error,
+) {
+
+	span := opentracing.StartSpan(
+		"CreatePosts",
+		opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+
 	query := squirrel.Insert(TableName).
 		Columns(InsertColumns...).
 		PlaceholderFormat(squirrel.Dollar).
@@ -68,7 +83,21 @@ func (r *repo) CreatePosts(ctx context.Context, posts []model.Post) (int64, erro
 	return result.RowsAffected()
 }
 
-func (r *repo) ListPosts(ctx context.Context, limit uint64, offset uint64) ([]model.Post, error) {
+func (r *repo) ListPosts(
+	ctx context.Context,
+	parentSpan opentracing.Span,
+	limit uint64,
+	offset uint64,
+) (
+	[]model.Post,
+	error,
+) {
+
+	span := opentracing.StartSpan(
+		"ListPosts",
+		opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+
 	query := squirrel.Select(SelectColumns...).
 		From(TableName).
 		OrderBy("score DESC").
@@ -97,7 +126,19 @@ func (r *repo) ListPosts(ctx context.Context, limit uint64, offset uint64) ([]mo
 	return posts, nil
 }
 
-func (r *repo) GetPromotedPost(ctx context.Context) (*model.Post, error) {
+func (r *repo) GetPromotedPost(
+	ctx context.Context,
+	parentSpan opentracing.Span,
+) (
+	*model.Post,
+	error,
+) {
+
+	span := opentracing.StartSpan(
+		"GetPromotedPost",
+		opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+
 	query := squirrel.Select(SelectColumns...).
 		From(TableName).
 		Where(squirrel.Eq{"promoted": true}).
