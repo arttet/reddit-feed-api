@@ -5,6 +5,8 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/repo"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	zerolog "github.com/rs/zerolog/log"
 
@@ -15,6 +17,13 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
+)
+
+var (
+	totalFeedNotFound = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "reddit_feed_api_feed_not_found_total",
+		Help: "The total number of feeds that were not found",
+	})
 )
 
 type api struct {
@@ -102,6 +111,9 @@ func (a *api) GenerateFeedV1(
 	}
 
 	if len(posts) == 0 {
+		zerolog.Debug().Msg("a feed not found")
+		totalFeedNotFound.Inc()
+
 		return nil, status.Error(codes.NotFound, "a feed not found")
 	}
 

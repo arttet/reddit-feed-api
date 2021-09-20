@@ -15,7 +15,7 @@ import (
 
 // NewTracer returns a new tracer.
 func NewTracer(cfg *config.Config) (io.Closer, error) {
-	tracerEndpoint := fmt.Sprintf("%s:%d", cfg.Jaeger.Host, cfg.Jaeger.Port)
+	tracerAddr := fmt.Sprintf("%s:%v", cfg.Jaeger.Host, cfg.Jaeger.Port)
 
 	cfgTracer := &jaegercfg.Configuration{
 		ServiceName: cfg.Jaeger.Service,
@@ -25,7 +25,7 @@ func NewTracer(cfg *config.Config) (io.Closer, error) {
 		},
 		Reporter: &jaegercfg.ReporterConfig{
 			LogSpans:           true,
-			LocalAgentHostPort: tracerEndpoint,
+			LocalAgentHostPort: tracerAddr,
 		},
 	}
 
