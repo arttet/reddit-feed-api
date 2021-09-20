@@ -23,3 +23,28 @@ database:
   name: reddit_feed_api
   sslmode: disable
   driver: pgx
+
+jaeger:
+  host: jaeger
+  port: 6831
+  service: reddit-feed-api
+
+metrics:
+  host: 0.0.0.0
+  port: 9100
+  path: /metrics
+
+status:
+  host: 0.0.0.0
+  port: 8000
+  livenessPath: /live
+  readinessPath: /ready
+  versionPath: /version
+
+kafka:
+  capacity: 512
+  topic: "ocp-template-events"
+  groupId: "ocp-template-api"
+  brokers:
+    - "kafka:9092"
+    - "localhost:9094"

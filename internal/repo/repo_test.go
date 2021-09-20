@@ -8,8 +8,10 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/arttet/reddit-feed-api/internal/mock"
 	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/repo"
+	"github.com/golang/mock/gomock"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
@@ -23,21 +25,33 @@ var _ = Describe("Repo", func() {
 		err    error
 		errRow = fmt.Errorf("row error")
 
-		mock sqlmock.Sqlmock
+		ctx context.Context
+
+		ctrl     *gomock.Controller
+		mockSpan *mock.MockSpan
+		mockSQL  sqlmock.Sqlmock
 
 		db     *sql.DB
 		sqlxDB *sqlx.DB
 
-		ctx        context.Context
 		repository repo.Repo
 	)
 
 	BeforeEach(func() {
-		db, mock, err = sqlmock.New()
+		ctx = context.Background()
+
+		ctrl = gomock.NewController(GinkgoT())
+		Expect(ctrl).ShouldNot(BeNil())
+
+		mockSpan = mock.NewMockSpan(ctrl)
+		Expect(mockSpan).ShouldNot(BeNil())
+		mockSpan.EXPECT().Context().Return(nil)
+
+		db, mockSQL, err = sqlmock.New()
 		Expect(err).Should(BeNil())
 		sqlxDB = sqlx.NewDb(db, "sqlmock")
+		Expect(sqlxDB).ShouldNot(BeNil())
 
-		ctx = context.Background()
 		repository = repo.NewRepo(sqlxDB)
 	})
 
@@ -45,9 +59,11 @@ var _ = Describe("Repo", func() {
 	})
 
 	AfterEach(func() {
-		mock.ExpectClose()
+		mockSQL.ExpectClose()
 		err = db.Close()
 		Expect(err).Should(BeNil())
+
+		ctrl.Finish()
 	})
 
 	// ////////////////////////////////////////////////////////////////////////
@@ -73,7 +89,7 @@ var _ = Describe("Repo", func() {
 				)
 			}
 
-			exec = mock.ExpectExec(fmt.Sprintf("INSERT INTO %s", repo.TableName)).WithArgs(values...)
+			exec = mockSQL.ExpectExec(fmt.Sprintf("INSERT INTO %s", repo.TableName)).WithArgs(values...)
 		})
 
 		Context("when creates successfully", func() {
@@ -87,7 +103,7 @@ var _ = Describe("Repo", func() {
 				rowsAffected = lastInsertID
 
 				exec.WillReturnResult(sqlmock.NewResult(lastInsertID, rowsAffected))
-				numberOfTheCreatedPosts, err = repository.CreatePosts(ctx, testData.Posts)
+				numberOfTheCreatedPosts, err = repository.CreatePosts(ctx, mockSpan, testData.Posts)
 			})
 
 			It("should return the number of the created posts correctly", func() {
@@ -99,7 +115,7 @@ var _ = Describe("Repo", func() {
 		Context("when fails to create because of a connection done error", func() {
 			BeforeEach(func() {
 				exec.WillReturnError(sql.ErrConnDone)
-				numberOfTheCreatedPosts, err = repository.CreatePosts(ctx, testData.Posts)
+				numberOfTheCreatedPosts, err = repository.CreatePosts(ctx, mockSpan, testData.Posts)
 			})
 
 			It("should return the zero-value", func() {
@@ -130,7 +146,7 @@ var _ = Describe("Repo", func() {
 				limit,
 				offset,
 			)
-			exec = mock.ExpectQuery(query)
+			exec = mockSQL.ExpectQuery(query)
 
 			rows = sqlmock.NewRows(repo.SelectColumns)
 			for i, post := range testData.Posts {
@@ -155,7 +171,7 @@ var _ = Describe("Repo", func() {
 		Context("when lists successfully", func() {
 			BeforeEach(func() {
 				exec.WillReturnRows(rows)
-				result, err = repository.ListPosts(ctx, limit, offset)
+				result, err = repository.ListPosts(ctx, mockSpan, limit, offset)
 			})
 
 			It("should populate the slice correctly", func() {
@@ -167,7 +183,7 @@ var _ = Describe("Repo", func() {
 		Context("when fails to list because of a connection done error", func() {
 			BeforeEach(func() {
 				exec.WillReturnError(sql.ErrConnDone)
-				result, err = repository.ListPosts(ctx, limit, offset)
+				result, err = repository.ListPosts(ctx, mockSpan, limit, offset)
 			})
 
 			It("should return an empty list of the posts", func() {
@@ -179,7 +195,7 @@ var _ = Describe("Repo", func() {
 		Context("when fails to list because of a no rows error", func() {
 			BeforeEach(func() {
 				exec.WillReturnError(sql.ErrNoRows)
-				result, err = repository.ListPosts(ctx, limit, offset)
+				result, err = repository.ListPosts(ctx, mockSpan, limit, offset)
 			})
 
 			It("should return an empty list of the posts", func() {
@@ -191,7 +207,7 @@ var _ = Describe("Repo", func() {
 		Context("when fails to get because of a row error", func() {
 			BeforeEach(func() {
 				exec.WillReturnRows(rows.RowError(0, errRow))
-				result, err = repository.ListPosts(ctx, limit, offset)
+				result, err = repository.ListPosts(ctx, mockSpan, limit, offset)
 			})
 
 			It("should return an empty promoted post", func() {
@@ -219,7 +235,7 @@ var _ = Describe("Repo", func() {
 				strings.Join(repo.SelectColumns, ", "),
 				repo.TableName,
 			)
-			exec = mock.ExpectQuery(query).WithArgs(true)
+			exec = mockSQL.ExpectQuery(query).WithArgs(true)
 
 			rows = sqlmock.NewRows(repo.SelectColumns)
 			for i, post := range testData.PromotedPosts {
@@ -244,7 +260,7 @@ var _ = Describe("Repo", func() {
 		Context("when gets successfully", func() {
 			BeforeEach(func() {
 				exec.WillReturnRows(rows)
-				result, err = repository.GetPromotedPost(ctx)
+				result, err = repository.GetPromotedPost(ctx, mockSpan)
 			})
 
 			It("should populate the slice correctly", func() {
@@ -256,7 +272,7 @@ var _ = Describe("Repo", func() {
 		Context("when fails to get because of a connection done error", func() {
 			BeforeEach(func() {
 				exec.WillReturnError(sql.ErrConnDone)
-				result, err = repository.GetPromotedPost(ctx)
+				result, err = repository.GetPromotedPost(ctx, mockSpan)
 			})
 
 			It("should return an empty promoted post", func() {
@@ -268,7 +284,7 @@ var _ = Describe("Repo", func() {
 		Context("when fails to get because of a no rows error", func() {
 			BeforeEach(func() {
 				exec.WillReturnError(sql.ErrNoRows)
-				result, err = repository.GetPromotedPost(ctx)
+				result, err = repository.GetPromotedPost(ctx, mockSpan)
 			})
 
 			It("should return an empty promoted post", func() {
@@ -280,7 +296,7 @@ var _ = Describe("Repo", func() {
 		Context("when fails to get because of a row error", func() {
 			BeforeEach(func() {
 				exec.WillReturnRows(rows.RowError(0, errRow))
-				result, err = repository.GetPromotedPost(ctx)
+				result, err = repository.GetPromotedPost(ctx, mockSpan)
 			})
 
 			It("should return an empty promoted post", func() {

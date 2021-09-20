@@ -10,6 +10,6 @@
 For local assembly you need to perform
 
 ```sh
-make deps # Installation of dependencies
+make deps  # Installation of dependencies
 make build # Build project
 ```
