@@ -36,9 +36,10 @@ metrics:
 
 status:
   host: 0.0.0.0
-  port: 8000
+  port: 8003
   livenessPath: /live
   readinessPath: /ready
+  swaggerPath: /swagger/
   versionPath: /version
 
 kafka:
