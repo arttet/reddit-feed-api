@@ -16,7 +16,7 @@ rest:
   port: 8081
 
 database:
-  host: localhost
+  host: 0.0.0.0
   port: 5432
   user: docker
   password: docker
@@ -25,6 +25,19 @@ database:
   driver: pgx
 
 jaeger:
-  host: localhost
+  host: 0.0.0.0
   port: 6831
   service: reddit-feed-api
+
+metrics:
+  host: 0.0.0.0
+  port: 9100
+  path: /metrics
+
+status:
+  host: localhost
+  port: 8003
+  livenessPath: /live
+  readinessPath: /ready
+  swaggerPath: /swagger/
+  versionPath: /version

@@ -22,6 +22,16 @@ func GetConfigInstance() Config {
 	return Config{}
 }
 
+// Project contains all parameters project information.
+type Project struct {
+	Debug       bool   `yaml:"debug"`
+	Name        string `yaml:"name"`
+	Environment string `yaml:"environment"`
+	SwaggerDir  string `yaml:"swaggerDir"`
+	Version     string
+	CommitHash  string
+}
+
 // Database contains all parameters database connection.
 type Database struct {
 	Host     string `yaml:"host"`
@@ -48,16 +58,6 @@ type REST struct {
 	Port int    `yaml:"port"`
 }
 
-// Project contains all parameters project information.
-type Project struct {
-	Debug       bool   `yaml:"debug"`
-	Name        string `yaml:"name"`
-	Environment string `yaml:"environment"`
-	SwaggerDir  string `yaml:"swaggerDir"`
-	Version     string
-	CommitHash  string
-}
-
 // Metrics contains all parameters metrics information.
 type Metrics struct {
 	Host string `yaml:"host"`
@@ -72,21 +72,22 @@ type Jaeger struct {
 	Service string `yaml:"service"`
 }
 
+// Service status config.
+type Status struct {
+	Host          string `yaml:"host"`
+	Port          int    `yaml:"port"`
+	LivenessPath  string `yaml:"livenessPath"`
+	ReadinessPath string `yaml:"readinessPath"`
+	SwaggerPath   string `yaml:"swaggerPath"`
+	VersionPath   string `yaml:"versionPath"`
+}
+
 // Kafka contains all parameters Kafka information.
 type Kafka struct {
 	Capacity uint64   `yaml:"capacity"`
 	Topic    string   `yaml:"topic"`
 	GroupID  string   `yaml:"groupId"`
 	Brokers  []string `yaml:"brokers"`
-}
-
-// Service status config.
-type Status struct {
-	Host          string `yaml:"host"`
-	Port          int    `yaml:"port"`
-	VersionPath   string `yaml:"versionPath"`
-	LivenessPath  string `yaml:"livenessPath"`
-	ReadinessPath string `yaml:"readinessPath"`
 }
 
 // Config contains all configuration parameters in the config package.
