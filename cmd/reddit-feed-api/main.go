@@ -14,6 +14,7 @@ import (
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/database"
 	"github.com/arttet/reddit-feed-api/internal/repo"
+	"github.com/arttet/reddit-feed-api/internal/tracer"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -75,6 +76,13 @@ func main() {
 			return
 		}
 	}
+
+	tracing, err := tracer.NewTracer(&cfg)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to init tracing")
+		return
+	}
+	defer tracing.Close()
 
 	var wg sync.WaitGroup
 	r := repo.NewRepo(db)
