@@ -5,7 +5,8 @@ import (
 	"errors"
 
 	"github.com/pressly/goose/v3"
-	"github.com/rs/zerolog/log"
+
+	"go.uber.org/zap"
 )
 
 func Migrate(db *sql.DB, command string) error {
@@ -14,18 +15,18 @@ func Migrate(db *sql.DB, command string) error {
 	switch command {
 	case "up":
 		if err = goose.Up(db, "migrations"); err != nil {
-			log.Error().Err(err).Msg("Migration failed")
+			zap.L().Error("migration failed", zap.Error(err))
 		}
 	case "up-by-one":
 		if err = goose.UpByOne(db, "migrations"); err != nil {
-			log.Error().Err(err).Msg("Migration failed")
+			zap.L().Error("migration failed", zap.Error(err))
 		}
 	case "down":
 		if err = goose.Down(db, "migrations"); err != nil {
-			log.Error().Err(err).Msg("Migration failed")
+			zap.L().Error("migration failed", zap.Error(err))
 		}
 	default:
-		log.Warn().Msgf("Invalid command for 'migration' flag: '%v'", command)
+		zap.L().Error("Invalid command for 'migration'", zap.String("flag", command))
 		return errors.New("invalid command")
 	}
 	return err

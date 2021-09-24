@@ -5,8 +5,8 @@ import (
 	"io"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/rs/zerolog/log"
 	"github.com/uber/jaeger-client-go"
+	"go.uber.org/zap"
 
 	"github.com/arttet/reddit-feed-api/internal/config"
 
@@ -29,14 +29,16 @@ func NewTracer(cfg *config.Config) (io.Closer, error) {
 		},
 	}
 
+	logger := zap.L()
+
 	tracer, closer, err := cfgTracer.NewTracer(jaegercfg.Logger(jaeger.StdLogger))
 	if err != nil {
-		log.Err(err).Msgf("Failed to init Jaeger: %v", err)
+		logger.Fatal("failed to init Jaeger", zap.Error(err))
 		return nil, err
 	}
 
 	opentracing.SetGlobalTracer(tracer)
-	log.Info().Msg("Traces started")
+	logger.Info("tracer started")
 
 	return closer, nil
 }

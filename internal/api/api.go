@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	zerolog "github.com/rs/zerolog/log"
+	"go.uber.org/zap"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/log"
@@ -28,12 +28,18 @@ var (
 
 type api struct {
 	pb.UnimplementedRedditFeedAPIServiceServer
+	logger        *zap.Logger
 	repo          repo.Repo
 	maxCountPosts uint64
 }
 
-func NewRedditFeedAPI(r repo.Repo) pb.RedditFeedAPIServiceServer {
+func NewRedditFeedAPI(
+	logger *zap.Logger,
+	r repo.Repo,
+) pb.RedditFeedAPIServiceServer {
+
 	return &api{
+		logger:        logger,
 		repo:          r,
 		maxCountPosts: 27,
 	}
@@ -75,7 +81,7 @@ func (a *api) CreatePostsV1(
 
 	numberOfCreatedPosts, err := a.repo.CreatePosts(ctx, span, posts)
 	if err != nil {
-		zerolog.Error().Err(err).Msg("Failed to insert the data")
+		a.logger.Error("failed to insert the data", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -106,14 +112,13 @@ func (a *api) GenerateFeedV1(
 
 	posts, err := a.repo.ListPosts(ctx, span, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
 	if err != nil {
-		zerolog.Error().Err(err).Msg("Failed to list the data")
+		a.logger.Error("failed to list the data", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if len(posts) == 0 {
-		zerolog.Debug().Msg("a feed not found")
+		a.logger.Warn("a feed not found")
 		totalFeedNotFound.Inc()
-
 		return nil, status.Error(codes.NotFound, "a feed not found")
 	}
 
@@ -145,7 +150,7 @@ func (a *api) filterPosts(
 	if n >= 3 {
 		promotedPost, err = a.repo.GetPromotedPost(ctx, span)
 		if err != nil {
-			zerolog.Warn().Err(err).Msg("Failed to find a promoted post")
+			a.logger.Warn("failed to find a promoted post")
 		}
 	}
 

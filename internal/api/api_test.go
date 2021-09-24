@@ -12,6 +12,7 @@ import (
 	"github.com/arttet/reddit-feed-api/internal/data"
 	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/repo"
+	"go.uber.org/zap"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -48,8 +49,15 @@ var _ = Describe("Reddit Feed API Server", func() {
 		sqlxDB = sqlx.NewDb(db, "sqlmock")
 		Expect(sqlxDB).ShouldNot(BeNil())
 
+		config := zap.NewDevelopmentConfig()
+		config.DisableCaller = true
+		config.DisableStacktrace = true
+
+		logger, _ := config.Build()
+		defer logger.Sync()
+
 		repository = repo.NewRepo(sqlxDB)
-		server = api.NewRedditFeedAPI(repository)
+		server = api.NewRedditFeedAPI(logger, repository)
 	})
 
 	JustBeforeEach(func() {

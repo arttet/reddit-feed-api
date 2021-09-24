@@ -11,7 +11,7 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/config"
 
-	"github.com/rs/zerolog/log"
+	"go.uber.org/zap"
 )
 
 func createStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server {
@@ -50,13 +50,15 @@ func readinessHandler(isReady *atomic.Value) http.HandlerFunc {
 
 func swaggerHandler(cfg *config.Config) func(w http.ResponseWriter, _ *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logger := zap.S()
+
 		if !strings.HasSuffix(r.URL.Path, ".swagger.json") {
-			log.Error().Msgf("Swagger JSON not found: %s", r.URL.Path)
+			logger.Errorw("swagger JSON not found %v", r.URL.Path)
 			http.NotFound(w, r)
 			return
 		}
 
-		log.Info().Msgf("Serving %s", r.URL.Path)
+		logger.Infow("Serving %s", r.URL.Path)
 
 		filepath := strings.TrimPrefix(r.URL.Path, cfg.Status.SwaggerPath)
 		filepath = path.Join(cfg.Project.SwaggerDir, filepath)
@@ -83,7 +85,7 @@ func versionHandler(cfg *config.Config) func(w http.ResponseWriter, _ *http.Requ
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(data); err != nil {
-			log.Error().Err(err).Msg("Service information encoding error")
+			zap.L().Error("Service information encoding error", zap.Error(err))
 		}
 	}
 }

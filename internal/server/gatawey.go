@@ -7,11 +7,10 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"go.uber.org/zap"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -44,12 +43,12 @@ func createGatewayServer(grpcAddr, gatewayAddr string) *http.Server {
 		grpc.WithInsecure(),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to dial server")
+		zap.L().Fatal("failed to dial server", zap.Error(err))
 	}
 
 	mux := runtime.NewServeMux()
 	if err := pb.RegisterRedditFeedAPIServiceHandler(context.Background(), mux, conn); err != nil {
-		log.Fatal().Err(err).Msg("Failed registration handler")
+		zap.L().Fatal("failed registration handler", zap.Error(err))
 	}
 
 	gatewayServer := &http.Server{

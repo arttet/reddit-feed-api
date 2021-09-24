@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -43,7 +44,7 @@ type Database struct {
 	Driver   string `yaml:"driver"`
 }
 
-// GRPC contains parameter address gRPC.
+// GRPC contains all parameters of gRPC.
 type GRPC struct {
 	Host              string `yaml:"host"`
 	Port              int    `yaml:"port"`
@@ -52,7 +53,7 @@ type GRPC struct {
 	MaxConnectionAge  int64  `yaml:"maxConnectionAge"`
 }
 
-// REST contains parameter REST JSON connection.
+// REST contains all parameters of REST.
 type REST struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
@@ -92,14 +93,15 @@ type Kafka struct {
 
 // Config contains all configuration parameters in the config package.
 type Config struct {
-	Project  Project  `yaml:"project"`
-	GRPC     GRPC     `yaml:"grpc"`
-	REST     REST     `yaml:"rest"`
-	Database Database `yaml:"database"`
-	Metrics  Metrics  `yaml:"metrics"`
-	Jaeger   Jaeger   `yaml:"jaeger"`
-	Kafka    Kafka    `yaml:"kafka"`
-	Status   Status   `yaml:"status"`
+	Project  Project    `yaml:"project"`
+	GRPC     GRPC       `yaml:"grpc"`
+	REST     REST       `yaml:"rest"`
+	Logger   zap.Config `yaml:"logger"`
+	Database Database   `yaml:"database"`
+	Metrics  Metrics    `yaml:"metrics"`
+	Jaeger   Jaeger     `yaml:"jaeger"`
+	Kafka    Kafka      `yaml:"kafka"`
+	Status   Status     `yaml:"status"`
 }
 
 // ReadConfigYML reads configurations from file and inits instance Config.

@@ -7,6 +7,11 @@ export GO111MODULE=on
 
 ###############################################################################
 
+SERVICE_NAME=reddit-feed-api
+SERVICE_PATH=github.com/arttet/reddit-feed-api
+
+###############################################################################
+
 # https://github.com/bufbuild/buf/releases
 BUF_VERSION=v1.0.0-rc1
 
@@ -21,11 +26,6 @@ endif
 ifeq ("Windows", "$(OS_NAME)")
 OS_ARCH:=$(addsuffix .exe,$(OS_ARCH))
 endif
-
-###############################################################################
-
-SERVICE_NAME=reddit-feed-api
-SERVICE_PATH=github.com/arttet/reddit-feed-api
 
 ###############################################################################
 
@@ -46,6 +46,7 @@ test:
 
 .PHONY: lint
 lint:
+	go mod tidy
 	golangci-lint run ./...
 
 .PHONY: style
@@ -67,9 +68,6 @@ grpcui:
 deps: .deps
 
 .deps:
-	@ # https://github.com/golang/mock
-	go install github.com/golang/mock/mockgen@v1.6.0
-
 	@ # https://pkg.go.dev/google.golang.org/protobuf/cmd/protoc-gen-go
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
@@ -98,12 +96,13 @@ generate: .generate
 
 	mv pkg/$(SERVICE_NAME)/$(SERVICE_PATH)/pkg/$(SERVICE_NAME)/* pkg/$(SERVICE_NAME)
 	rm -rf pkg/$(SERVICE_NAME)/github.com/
-	cd pkg/$(SERVICE_NAME) # && ls go.mod || (go mod init $(SERVICE_PATH)/pkg/$(SERVICE_NAME) && go mod tidy)
+	cd pkg/$(SERVICE_NAME) && ls go.mod || (go mod init $(SERVICE_PATH)/pkg/$(SERVICE_NAME) && go mod tidy)
 
 ###############################################################################
 
 .build:
 	go mod download && CGO_ENABLED=0 go build \
+		-mod=mod \
 		-tags='no_mysql no_sqlite3' \
 		-ldflags=" \
 			-X '$(SERVICE_PATH)/internal/config.version=$(VERSION)' \
