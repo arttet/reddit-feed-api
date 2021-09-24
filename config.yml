@@ -15,6 +15,21 @@ rest:
   host: 0.0.0.0
   port: 8081
 
+logger:
+  level: info
+  encoding: json
+  outputPaths:
+    - stdout
+  errorOutputPaths:
+    - stdout
+    - errors.json
+  encoderConfig:
+    messageKey: msg
+    levelKey: lvl
+    levelEncoder: lowercase
+    timeKey: time
+    timeEncoder: iso8601
+
 database:
   host: postgres
   port: 5432

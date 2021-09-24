@@ -5,9 +5,9 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/model"
 
-	"github.com/rs/zerolog/log"
+	"go.uber.org/zap"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type TestData struct {
@@ -19,14 +19,20 @@ type TestData struct {
 func LoadTestData(filename string) *TestData {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Error().Err(err).Msgf("Failed to read the file %s", filename)
+		zap.L().Fatal("failed to read the file",
+			zap.String("file", filename),
+			zap.Error(err),
+		)
 		return nil
 	}
 
 	var data TestData
 	err = yaml.Unmarshal(file, &data)
 	if err != nil {
-		log.Error().Err(err).Msgf("Failed to load test data from the file %s", filename)
+		zap.L().Fatal("failed to load test data",
+			zap.String("file", filename),
+			zap.Error(err),
+		)
 		return nil
 	}
 

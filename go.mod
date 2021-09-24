@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Masterminds/squirrel v1.5.0
-	github.com/envoyproxy/protoc-gen-validate v0.1.0
+	github.com/arttet/reddit-feed-api/pkg/reddit-feed-api v0.0.0-00010101000000-000000000000
 	github.com/golang/mock v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -18,12 +18,9 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pressly/goose/v3 v3.1.0
 	github.com/prometheus/client_golang v1.11.0
-	github.com/rs/zerolog v1.25.0
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
-	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83
+	go.uber.org/zap v1.19.1
 	google.golang.org/grpc v1.40.0
-	google.golang.org/protobuf v1.27.1
-	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
@@ -31,7 +28,8 @@ require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/envoyproxy/protoc-gen-validate v0.6.1 // indirect
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.10.0 // indirect
@@ -50,11 +48,17 @@ require (
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
-	go.uber.org/atomic v1.6.0 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
-	golang.org/x/net v0.0.0-20210913180222-943fd674d43e // indirect
-	golang.org/x/sys v0.0.0-20210910150752-751e447fb3d0 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781 // indirect
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
+	golang.org/x/text v0.3.6 // indirect
+	google.golang.org/genproto v0.0.0-20210924002016-3dee208752a0 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/arttet/reddit-feed-api/pkg/reddit-feed-api => ./pkg/reddit-feed-api
