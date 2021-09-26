@@ -39,7 +39,7 @@ func main() {
 	zap.ReplaceGlobals(logger)
 	defer logger.Sync() // nolint:errcheck
 
-	logger.Debug("starting service",
+	logger.Info("starting service",
 		zap.String("name", cfg.Project.Name),
 		zap.Bool("debug", cfg.Project.Debug),
 		zap.String("environment", cfg.Project.Environment),
