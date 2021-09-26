@@ -54,7 +54,7 @@ metrics:
 
 status:
   host: localhost
-  port: 8003
+  port: 8000
   livenessPath: /live
   readinessPath: /ready
   swaggerPath: /swagger/
