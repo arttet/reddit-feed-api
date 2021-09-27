@@ -13,9 +13,9 @@ import (
 )
 
 type Repo interface {
-	CreatePosts(ctx context.Context, parentSpan opentracing.Span, posts []model.Post) (int64, error)
-	ListPosts(ctx context.Context, parentSpan opentracing.Span, limit uint64, offset uint64) ([]model.Post, error)
-	GetPromotedPost(ctx context.Context, parentSpan opentracing.Span) (*model.Post, error)
+	CreatePosts(ctx context.Context, posts []model.Post) (int64, error)
+	ListPosts(ctx context.Context, limit uint64, offset uint64) ([]model.Post, error)
+	GetPromotedPost(ctx context.Context) (*model.Post, error)
 }
 
 func NewRepo(db *sqlx.DB) Repo {
@@ -45,16 +45,13 @@ type repo struct {
 
 func (r *repo) CreatePosts(
 	ctx context.Context,
-	parentSpan opentracing.Span,
 	posts []model.Post,
 ) (
 	int64,
 	error,
 ) {
 
-	span := opentracing.StartSpan(
-		"CreatePosts",
-		opentracing.ChildOf(parentSpan.Context()))
+	span, ctx := opentracing.StartSpanFromContext(ctx, "CreatePosts")
 	defer span.Finish()
 
 	query := squirrel.Insert(TableName).
@@ -85,7 +82,6 @@ func (r *repo) CreatePosts(
 
 func (r *repo) ListPosts(
 	ctx context.Context,
-	parentSpan opentracing.Span,
 	limit uint64,
 	offset uint64,
 ) (
@@ -93,9 +89,7 @@ func (r *repo) ListPosts(
 	error,
 ) {
 
-	span := opentracing.StartSpan(
-		"ListPosts",
-		opentracing.ChildOf(parentSpan.Context()))
+	span, ctx := opentracing.StartSpanFromContext(ctx, "ListPosts")
 	defer span.Finish()
 
 	query := squirrel.Select(SelectColumns...).
@@ -128,15 +122,12 @@ func (r *repo) ListPosts(
 
 func (r *repo) GetPromotedPost(
 	ctx context.Context,
-	parentSpan opentracing.Span,
 ) (
 	*model.Post,
 	error,
 ) {
 
-	span := opentracing.StartSpan(
-		"GetPromotedPost",
-		opentracing.ChildOf(parentSpan.Context()))
+	span, ctx := opentracing.StartSpanFromContext(ctx, "GetPromotedPost")
 	defer span.Finish()
 
 	query := squirrel.Select(SelectColumns...).

@@ -65,7 +65,7 @@ func NewProducer(
 		logger:      logger,
 	}
 
-	go p.sender(ctx)
+	go p.loop(ctx)
 
 	return p, nil
 }
@@ -111,7 +111,9 @@ func (p *producer) send(
 	return nil
 }
 
-func (p *producer) sender(ctx context.Context) {
+// loop fetches items using p.messageChan and sends them on SendMessage.
+// loop exits when context is done.
+func (p *producer) loop(ctx context.Context) {
 	for {
 		select {
 		case msg := <-p.messageChan:

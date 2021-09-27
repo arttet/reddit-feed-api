@@ -3,12 +3,12 @@ ifneq ("1.17","$(shell printf "$(GO_VERSION_SHORT)\n1.17" | sort -V | head -1)")
 $(error NEED GO VERSION >= 1.17. Found: $(GO_VERSION_SHORT))
 endif
 
-export GO111MODULE=on
-
 ###############################################################################
 
 SERVICE_NAME=reddit-feed-api
 SERVICE_PATH=github.com/arttet/reddit-feed-api
+SERVICE_MAIN=cmd/$(SERVICE_NAME)/main.go
+SERVICE_EXE=./bin/$(SERVICE_NAME)$(shell go env GOEXE)
 
 ###############################################################################
 
@@ -23,29 +23,32 @@ ifeq ("NT", "$(findstring NT,$(OS_NAME))")
 OS_NAME=Windows
 endif
 
-ifeq ("Windows", "$(OS_NAME)")
-OS_ARCH:=$(addsuffix .exe,$(OS_ARCH))
-endif
-
 ###############################################################################
 
 .PHONY: build
 build: generate .build
-ifeq ("NT", "$(findstring NT,$(shell uname -s))")
-	mv ./bin/$(SERVICE_NAME) ./bin/$(SERVICE_NAME).exe
-endif
 
 .PHONY: run
 run:
-	go run cmd/reddit-feed-api/main.go
+	go run \
+		-gcflags='-m' \
+		-gcflags='$(SERVICE_PATH)/internal/api=-m' \
+		-gcflags='$(SERVICE_PATH)/internal/server=-m' \
+		$(SERVICE_MAIN) --cfg config-dev.yml
 
 .PHONY: test
 test:
 	go test -v -timeout 30s -coverprofile cover.out ./...
 	go tool cover -func cover.out | grep total | awk '{print ($$3)}'
 
+.PHONY: bench
+bench:
+	go test -cpuprofile cpu.prof -memprofile mem.prof -bench ./...
+
 .PHONY: lint
 lint:
+	@command -v golangci-lint 2>&1 > /dev/null || (echo "Install golangci-lint" && \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(shell go env GOPATH)/bin" v1.42.1)
 	golangci-lint run ./...
 
 .PHONY: tidy
@@ -61,6 +64,10 @@ style:
 cover:
 	go tool cover -html cover.out
 
+# Enable pprof: internal/server/status.go:13
+.PHONY: pprof
+pprof: .pprof-cpu
+
 .PHONY: grpcui
 grpcui:
 	grpcui -plaintext 0.0.0.0:8082
@@ -71,6 +78,8 @@ grpcui:
 deps: .deps
 
 .deps:
+	go env -w GO111MODULE=on
+
 	@ # https://pkg.go.dev/google.golang.org/protobuf/cmd/protoc-gen-go
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
@@ -93,7 +102,7 @@ generate: .generate
 .generate:
 	@command -v buf 2>&1 > /dev/null || (echo "Install buf" && \
 		mkdir -p "$(GOBIN)" && \
-		curl -k -sSL0 https://github.com/bufbuild/buf/releases/download/$(BUF_VERSION)/buf-$(OS_NAME)-$(OS_ARCH) -o "$(GOBIN)/buf" && \
+		curl -k -sSL0 https://github.com/bufbuild/buf/releases/download/$(BUF_VERSION)/buf-$(OS_NAME)-$(OS_ARCH)$(shell go env GOEXE) -o "$(GOBIN)/buf" && \
 		chmod +x "$(GOBIN)/buf")
 	@PATH="$(GOBIN):$(PATH)" buf generate
 
@@ -111,4 +120,14 @@ generate: .generate
 			-X '$(SERVICE_PATH)/internal/config.version=$(VERSION)' \
 			-X '$(SERVICE_PATH)/internal/config.commitHash=$(COMMIT_HASH)' \
 		" \
-		-o ./bin/reddit-feed-api ./cmd/reddit-feed-api/main.go
+		-o $(SERVICE_EXE) $(SERVICE_MAIN)
+
+###############################################################################
+
+.pprof-cpu:
+	go tool pprof http://localhost:8000/debug/pprof/profile?seconds=30
+
+.pprof-mem:
+	go tool pprof -alloc_space http://localhost:8000/debug/pprof/heap
+
+###############################################################################

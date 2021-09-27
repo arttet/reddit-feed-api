@@ -1,8 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "reddit/reddit_feed_api/v1/reddit_feed_api.proto",
-    "version": "version not set"
+    "title": "Reddit Feed API",
+    "version": "1.0",
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/arttet/reddit-feed-api/blob/main/LICENSE"
+    }
   },
   "consumes": [
     "application/json"

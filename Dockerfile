@@ -20,4 +20,4 @@ COPY --from=builder /home/${GITHUB_PATH}/config.yml .
 COPY --from=builder /home/${GITHUB_PATH}/migrations/ ./migrations/
 
 RUN chown root:root reddit-feed-api
-CMD ["./reddit-feed-api", "--migration", "up"]
+CMD ["./reddit-feed-api"]
