@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"go.uber.org/zap"
@@ -59,6 +60,13 @@ type REST struct {
 	Port int    `yaml:"port"`
 }
 
+// Jaeger contains all parameters tracer information.
+type Jaeger struct {
+	Host    string `yaml:"host"`
+	Port    int    `yaml:"port"`
+	Service string `yaml:"service"`
+}
+
 // Metrics contains all parameters metrics information.
 type Metrics struct {
 	Host string `yaml:"host"`
@@ -66,14 +74,7 @@ type Metrics struct {
 	Path string `yaml:"path"`
 }
 
-// Jaeger contains all parameters metrics information.
-type Jaeger struct {
-	Host    string `yaml:"host"`
-	Port    int    `yaml:"port"`
-	Service string `yaml:"service"`
-}
-
-// Service status config.
+// Status contains all parameters status information.
 type Status struct {
 	Host          string `yaml:"host"`
 	Port          int    `yaml:"port"`
@@ -85,7 +86,7 @@ type Status struct {
 
 // Kafka contains all parameters Kafka information.
 type Kafka struct {
-	Capacity uint64   `yaml:"capacity"`
+	Capacity int      `yaml:"capacity"`
 	Topic    string   `yaml:"topic"`
 	GroupID  string   `yaml:"groupId"`
 	Brokers  []string `yaml:"brokers"`
@@ -94,14 +95,28 @@ type Kafka struct {
 // Config contains all configuration parameters in the config package.
 type Config struct {
 	Project  Project    `yaml:"project"`
+	Database Database   `yaml:"database"`
+	Logger   zap.Config `yaml:"logger"`
 	GRPC     GRPC       `yaml:"grpc"`
 	REST     REST       `yaml:"rest"`
-	Logger   zap.Config `yaml:"logger"`
-	Database Database   `yaml:"database"`
-	Metrics  Metrics    `yaml:"metrics"`
 	Jaeger   Jaeger     `yaml:"jaeger"`
-	Kafka    Kafka      `yaml:"kafka"`
+	Metrics  Metrics    `yaml:"metrics"`
 	Status   Status     `yaml:"status"`
+	Kafka    Kafka      `yaml:"kafka"`
+}
+
+// String returns a data source name.
+func (db *Database) String() string {
+	dsn := fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=%v",
+		db.Host,
+		db.Port,
+		db.User,
+		db.Password,
+		db.Name,
+		db.SslMode,
+	)
+
+	return dsn
 }
 
 // ReadConfigYML reads configurations from file and inits instance Config.

@@ -10,9 +10,14 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/api"
 	"github.com/arttet/reddit-feed-api/internal/data"
+	"github.com/arttet/reddit-feed-api/internal/mock"
 	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/repo"
+
+	"github.com/golang/mock/gomock"
+
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,7 +37,9 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 		ctx context.Context
 
-		mockSQL sqlmock.Sqlmock
+		ctrl         *gomock.Controller
+		mockProducer *mock.MockProducer
+		mockSQL      sqlmock.Sqlmock
 
 		db     *sql.DB
 		sqlxDB *sqlx.DB
@@ -44,20 +51,27 @@ var _ = Describe("Reddit Feed API Server", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
+		ctrl = gomock.NewController(GinkgoT())
+		Expect(ctrl).ShouldNot(BeNil())
+
 		db, mockSQL, err = sqlmock.New()
 		Expect(err).Should(BeNil())
 		sqlxDB = sqlx.NewDb(db, "sqlmock")
 		Expect(sqlxDB).ShouldNot(BeNil())
 
+		mockProducer = mock.NewMockProducer(ctrl)
+		Expect(mockProducer).ShouldNot(BeNil())
+		mockProducer.EXPECT().CreatePosts(gomock.Any()).AnyTimes()
+
 		config := zap.NewDevelopmentConfig()
+		config.Level.SetLevel(zapcore.PanicLevel)
 		config.DisableCaller = true
 		config.DisableStacktrace = true
-
 		logger, _ := config.Build()
 		defer logger.Sync()
 
 		repository = repo.NewRepo(sqlxDB)
-		server = api.NewRedditFeedAPI(logger, repository)
+		server = api.NewRedditFeedAPI(repository, mockProducer, logger)
 	})
 
 	JustBeforeEach(func() {
@@ -67,6 +81,8 @@ var _ = Describe("Reddit Feed API Server", func() {
 		mockSQL.ExpectClose()
 		err := db.Close()
 		Expect(err).Should(BeNil())
+
+		ctrl.Finish()
 	})
 
 	// ////////////////////////////////////////////////////////////////////////

@@ -60,7 +60,7 @@ services:
       - reddit-network
     volumes:
       # - pgdata:/var/lib/postgresql/data
-      - ./scripts/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
+      - ./external/scripts/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
 
   jaeger:
     image: jaegertracing/all-in-one
@@ -89,7 +89,7 @@ services:
     networks:
       - reddit-network
     volumes:
-      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "./external/prometheus.yml:/etc/prometheus/prometheus.yml"
 
   zookeeper:
     image: confluentinc/cp-zookeeper
@@ -151,7 +151,7 @@ services:
       - 8080:8080
     restart: always
     volumes:
-      - ./swagger:/docs
+      - ./external/swagger:/docs
     environment:
       SWAGGER_JSON: /docs/api.swagger.json
     depends_on:

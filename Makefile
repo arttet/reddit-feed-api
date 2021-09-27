@@ -46,8 +46,11 @@ test:
 
 .PHONY: lint
 lint:
-	go mod tidy
 	golangci-lint run ./...
+
+.PHONY: tidy
+tidy:
+	go mod tidy
 
 .PHONY: style
 style:
