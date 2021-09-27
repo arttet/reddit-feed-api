@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 
+	"github.com/arttet/reddit-feed-api/internal/broker"
 	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/repo"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -28,19 +30,22 @@ var (
 
 type api struct {
 	pb.UnimplementedRedditFeedAPIServiceServer
+	repository    repo.Repo
+	producer      broker.Producer
 	logger        *zap.Logger
-	repo          repo.Repo
 	maxCountPosts uint64
 }
 
 func NewRedditFeedAPI(
-	logger *zap.Logger,
 	r repo.Repo,
+	p broker.Producer,
+	logger *zap.Logger,
 ) pb.RedditFeedAPIServiceServer {
 
 	return &api{
+		repository:    r,
+		producer:      p,
 		logger:        logger,
-		repo:          r,
 		maxCountPosts: 27,
 	}
 }
@@ -79,11 +84,13 @@ func (a *api) CreatePostsV1(
 		posts = append(posts, post)
 	}
 
-	numberOfCreatedPosts, err := a.repo.CreatePosts(ctx, span, posts)
+	numberOfCreatedPosts, err := a.repository.CreatePosts(ctx, span, posts)
 	if err != nil {
 		a.logger.Error("failed to insert the data", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	a.producer.CreatePosts(posts)
 
 	response := &pb.CreatePostsV1Response{
 		NumberOfCreatedPosts: numberOfCreatedPosts,
@@ -110,7 +117,7 @@ func (a *api) GenerateFeedV1(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	posts, err := a.repo.ListPosts(ctx, span, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
+	posts, err := a.repository.ListPosts(ctx, span, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
 	if err != nil {
 		a.logger.Error("failed to list the data", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -148,7 +155,7 @@ func (a *api) filterPosts(
 	var promotedPost *model.Post
 
 	if n >= 3 {
-		promotedPost, err = a.repo.GetPromotedPost(ctx, span)
+		promotedPost, err = a.repository.GetPromotedPost(ctx, span)
 		if err != nil {
 			a.logger.Warn("failed to find a promoted post")
 		}

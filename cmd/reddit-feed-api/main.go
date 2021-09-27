@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/database"
@@ -47,15 +46,7 @@ func main() {
 		zap.String("version", cfg.Project.Version),
 	)
 
-	dsn := fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=%v",
-		cfg.Database.Host,
-		cfg.Database.Port,
-		cfg.Database.User,
-		cfg.Database.Password,
-		cfg.Database.Name,
-		cfg.Database.SslMode,
-	)
-
+	dsn := cfg.Database.String()
 	db, err := database.NewConnection(dsn, cfg.Database.Driver)
 	if err != nil {
 		logger.Fatal("database initialization", zap.Error(err))

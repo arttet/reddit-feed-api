@@ -1,8 +1,8 @@
 project:
   name: Reddit Feed API
-  debug: false
+  debug: true
   environment: production
-  swaggerDir: swagger
+  swaggerDir: external/swagger
 
 grpc:
   host: 0.0.0.0
@@ -55,3 +55,11 @@ status:
   readinessPath: /ready
   swaggerPath: /swagger/
   versionPath: /version
+
+kafka:
+  capacity: 512
+  topic: reddit-feed-events
+  groupId: reddit-feed-api
+  brokers:
+    - kafka:9092
+    - localhost:9094
