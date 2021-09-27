@@ -18,7 +18,7 @@ plugins:
     opt:
       - lang=go
   - name: swagger
-    out: swagger
+    out: external/swagger
     opt:
       - allow_merge=true
       - merge_file_name=api

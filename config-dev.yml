@@ -2,7 +2,7 @@ project:
   name: Reddit Feed API
   debug: true
   environment: development
-  swaggerDir: swagger
+  swaggerDir: external/swagger
 
 grpc:
   host: 0.0.0.0
@@ -23,7 +23,7 @@ logger:
     - logs.json
   errorOutputPaths:
     - stdout
-    - errors.json
+    - logs.json
   encoderConfig:
     messageKey: message
     levelKey: level
@@ -59,3 +59,10 @@ status:
   readinessPath: /ready
   swaggerPath: /swagger/
   versionPath: /version
+
+kafka:
+  capacity: 512
+  topic: reddit-feed-events
+  groupId: reddit-feed-api
+  brokers:
+    - localhost:9092

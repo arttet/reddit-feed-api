@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/arttet/reddit-feed-api/internal/api"
+	"github.com/arttet/reddit-feed-api/internal/broker"
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/repo"
 
@@ -109,8 +110,17 @@ func (s *Server) Start(cfg *config.Config) error {
 		)),
 	)
 
-	r := repo.NewRepo(s.db)
-	pb.RegisterRedditFeedAPIServiceServer(grpcServer, api.NewRedditFeedAPI(logger, r))
+	producer, err := broker.NewProducer(ctx, &cfg.Kafka, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create a producer: %w", err)
+	}
+	logger.Info("the Kafka producer is running", zap.Strings("brokers", cfg.Kafka.Brokers))
+
+	repository := repo.NewRepo(s.db)
+	pb.RegisterRedditFeedAPIServiceServer(
+		grpcServer,
+		api.NewRedditFeedAPI(repository, producer, logger),
+	)
 
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(grpcServer)
