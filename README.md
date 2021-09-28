@@ -20,7 +20,7 @@ docker-compose build
 
 ### For local development
 ```sh
-./reddit-feed-api --cfg config-dev.yml --migration up
+make run
 ```
 
 ### Docker
@@ -96,6 +96,13 @@ The Swagger UI is an open source project to visually render documentation for an
 
 - http://localhost:8080
 
+### Grafana:
+
+- http://localhost:3000
+    - login `admin`
+    - password `ADMIN`
+    - [Dashboard: Reddit Feed API](http://localhost:3000/d/QXuFMwN7z/reddit-feed-api?orgId=1&refresh=5s)
+
 ### Jaeger UI
 
 Monitor and troubleshoot transactions in complex distributed systems.
@@ -107,12 +114,6 @@ Monitor and troubleshoot transactions in complex distributed systems.
 Prometheus is an open-source systems monitoring and alerting toolkit
 
 - http://localhost:9090
-
-### Grafana:
-
-- http://localhost:3000
-    - login `admin`
-    - password `MYPASSWORT`
 
 ### Kafka UI
 

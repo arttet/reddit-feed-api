@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
+	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1"
 )
 
 var (

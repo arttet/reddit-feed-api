@@ -3,6 +3,8 @@ ARG GITHUB_PATH=github.com/arttet/reddit-feed-api
 
 FROM golang:1.17-alpine AS builder
 
+ARG VERSION COMMIT_HASH
+
 RUN apk add --update make git protoc protobuf protobuf-dev curl
 COPY . /home/${GITHUB_PATH}
 WORKDIR /home/${GITHUB_PATH}
@@ -17,7 +19,7 @@ WORKDIR /root/
 
 COPY --from=builder /home/${GITHUB_PATH}/bin/reddit-feed-api .
 COPY --from=builder /home/${GITHUB_PATH}/config.yml .
-COPY --from=builder /home/${GITHUB_PATH}/migrations/ ./migrations/
+COPY --from=builder /home/${GITHUB_PATH}/migrations/ ./migrations/001_init_db.sql
 
 RUN chown root:root reddit-feed-api
 CMD ["./reddit-feed-api"]

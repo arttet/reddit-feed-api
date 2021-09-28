@@ -59,7 +59,7 @@ services:
     networks:
       - reddit-network
     volumes:
-      # - pgdata:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
       - ./external/scripts/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
 
   jaeger:
@@ -89,7 +89,7 @@ services:
     networks:
       - reddit-network
     volumes:
-      - "./external/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - ./external/prometheus.yml:/etc/prometheus/prometheus.yml
 
   zookeeper:
     image: confluentinc/cp-zookeeper
@@ -151,7 +151,7 @@ services:
       - 8080:8080
     restart: always
     volumes:
-      - ./external/swagger:/docs
+      - swagger_data:/docs
     environment:
       SWAGGER_JSON: /docs/api.swagger.json
     depends_on:
@@ -167,12 +167,13 @@ services:
     links:
       - prometheus
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=MYPASSWORT
+      - GF_SECURITY_ADMIN_PASSWORD=ADMIN
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
       - reddit-network
     volumes:
-      - "./data/grafana:/var/lib/grafana"
+      - grafana_data:/var/lib/grafana
+      - grafana_init:/etc/grafana/provisioning
 
   # Graylog: https://hub.docker.com/r/graylog/graylog/
   graylog:
@@ -212,7 +213,7 @@ services:
     networks:
       - reddit-network
     volumes:
-      - mongodata:/data/db
+      - mongo_data:/data/db
 
   # Elasticsearch: https://www.elastic.co/guide/en/elasticsearch/reference/6.x/docker.html
   elasticsearch:
@@ -233,14 +234,32 @@ services:
     networks:
       - reddit-network
     volumes:
-      - esdata:/usr/share/elasticsearch/data
+      - es_data:/usr/share/elasticsearch/data
 
 volumes:
-  pgdata:
+  pg_data:
     driver: local
-  esdata:
+  swagger_data:
     driver: local
-  mongodata:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/external/swagger
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/grafana
+  grafana_init:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/external/grafana
+  mongo_data:
+    driver: local
+  es_data:
     driver: local
 
 networks:
