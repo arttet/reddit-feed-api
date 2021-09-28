@@ -37,14 +37,14 @@ type api struct {
 }
 
 func NewRedditFeedAPI(
-	r repo.Repo,
-	p broker.Producer,
+	repository repo.Repo,
+	producer broker.Producer,
 	logger *zap.Logger,
 ) pb.RedditFeedAPIServiceServer {
 
 	return &api{
-		repository:    r,
-		producer:      p,
+		repository:    repository,
+		producer:      producer,
 		logger:        logger,
 		maxCountPosts: 27,
 	}
@@ -84,7 +84,7 @@ func (a *api) CreatePostsV1(
 		posts = append(posts, post)
 	}
 
-	numberOfCreatedPosts, err := a.repository.CreatePosts(ctx, span, posts)
+	numberOfCreatedPosts, err := a.repository.CreatePosts(ctx, posts)
 	if err != nil {
 		a.logger.Error("failed to insert the data", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -117,7 +117,7 @@ func (a *api) GenerateFeedV1(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	posts, err := a.repository.ListPosts(ctx, span, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
+	posts, err := a.repository.ListPosts(ctx, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
 	if err != nil {
 		a.logger.Error("failed to list the data", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -130,7 +130,7 @@ func (a *api) GenerateFeedV1(
 	}
 
 	response := &pb.GenerateFeedV1Response{
-		Posts: a.filterPosts(ctx, span, posts),
+		Posts: a.filterPosts(ctx, posts),
 	}
 
 	return response, nil
@@ -138,15 +138,12 @@ func (a *api) GenerateFeedV1(
 
 func (a *api) filterPosts(
 	ctx context.Context,
-	parentSpan opentracing.Span,
 	posts []model.Post,
 ) (
 	list []*pb.Post,
 ) {
 
-	span := opentracing.StartSpan(
-		"filterPosts",
-		opentracing.ChildOf(parentSpan.Context()))
+	span, ctx := opentracing.StartSpanFromContext(ctx, "filterPosts")
 	defer span.Finish()
 
 	n := len(posts)
@@ -155,7 +152,7 @@ func (a *api) filterPosts(
 	var promotedPost *model.Post
 
 	if n >= 3 {
-		promotedPost, err = a.repository.GetPromotedPost(ctx, span)
+		promotedPost, err = a.repository.GetPromotedPost(ctx)
 		if err != nil {
 			a.logger.Warn("failed to find a promoted post")
 		}
