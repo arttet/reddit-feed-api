@@ -1,15 +1,18 @@
 # Reddit Feed API
 
- [![Go](https://img.shields.io/badge/Go-1.17-blue.svg)](https://golang.org)
-[![tests](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml/badge.svg?branch=develop)](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml)
+[![Go](https://img.shields.io/badge/Go-1.17-blue.svg)](https://golang.org)
+[![build](https://github.com/arttet/reddit-feed-api/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/arttet/reddit-feed-api/actions/workflows/build.yml)
+[![tests](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/arttet/reddit-feed-api/branch/main/graph/badge.svg?token=S5a5aZsotj)](https://codecov.io/gh/arttet/reddit-feed-api)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/arttet/reddit-feed-api/blob/main/LICENSE)
+[![](https://img.shields.io/github/v/release/arttet/reddit-feed-api?style=flat-square)](https://github.com/arttet/reddit-feed-api/releases)
 
 ## Build project
 
 ### For local development
 ```sh
 make deps  # Installation of dependencies
-make build # Build project
+make build # Build the project
 ```
 ### Docker
 ```sh
