@@ -1,7 +1,7 @@
 # Reddit Feed API
 
  [![Go](https://img.shields.io/badge/Go-1.17-blue.svg)](https://golang.org)
-[![Tests](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml/badge.svg?branch=develop)](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml)
+[![tests](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml/badge.svg?branch=develop)](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/arttet/reddit-feed-api/blob/main/LICENSE)
 
 ## Build project
@@ -69,6 +69,8 @@ Service condition and its information
     - [/live](http://localhost:8000/live)- Layed whether the server is running
     - [/ready](http://localhost:8000/ready) - Is it ready to accept requests?
     - [/version](http://localhost:8000/version) - Version and assembly information
+    - [/debug/swagger/{swagger_file}](http://localhost:8000/debug/swagger/api.swagger.json) - Show a Swagger file in debug mode
+    - [/debug/pprof](http://localhost:8000/debug/pprof) - Profiles when profiling enables
 
 ### Kafka
 

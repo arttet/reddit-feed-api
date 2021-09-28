@@ -40,6 +40,7 @@ database:
   password: docker
   name: reddit_feed_api
   sslmode: disable
+  migrationsDir: migrations
   driver: pgx
 
 jaeger:
@@ -57,7 +58,7 @@ status:
   port: 8000
   livenessPath: /live
   readinessPath: /ready
-  swaggerPath: /swagger/
+  swaggerPath: /debug/swagger/
   versionPath: /version
 
 kafka:

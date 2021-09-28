@@ -9,6 +9,9 @@ import (
 	"strings"
 	"sync/atomic"
 
+	// nolint:godot
+	// _ "net/http/pprof"
+
 	"github.com/arttet/reddit-feed-api/internal/config"
 
 	"go.uber.org/zap"
@@ -21,10 +24,11 @@ func createStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server 
 
 	mux.HandleFunc(cfg.Status.LivenessPath, livenessHandler)
 	mux.HandleFunc(cfg.Status.ReadinessPath, readinessHandler(isReady))
+	mux.HandleFunc(cfg.Status.VersionPath, versionHandler(cfg))
+
 	if cfg.Project.Debug {
 		mux.HandleFunc(cfg.Status.SwaggerPath, swaggerHandler(cfg))
 	}
-	mux.HandleFunc(cfg.Status.VersionPath, versionHandler(cfg))
 
 	statusServer := &http.Server{
 		Addr:    statusAddr,

@@ -8,6 +8,8 @@ import (
 	"github.com/arttet/reddit-feed-api/internal/server"
 	"github.com/arttet/reddit-feed-api/internal/tracer"
 
+	"github.com/pressly/goose/v3"
+
 	"go.uber.org/zap"
 
 	_ "github.com/jackc/pgx/v4"
@@ -16,22 +18,17 @@ import (
 )
 
 func main() {
-	migration := flag.String("migration", "", "Defines the migration start option")
+	migration := flag.Bool("migration", true, "Defines the migration start option")
 	configYML := flag.String("cfg", "config.yml", "Defines the configuration file option")
 	flag.Parse()
 
-	logger, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
-
 	if err := config.ReadConfigYML(*configYML); err != nil {
-		logger.Fatal("reading configuration", zap.Error(err))
+		panic(err)
 	}
 
 	cfg := config.GetConfigInstance()
 
-	logger, err = cfg.Logger.Build()
+	logger, err := cfg.Logger.Build()
 	if err != nil {
 		panic(err)
 	}
@@ -40,23 +37,22 @@ func main() {
 
 	logger.Info("starting service",
 		zap.String("name", cfg.Project.Name),
+		zap.String("yml", *configYML),
 		zap.Bool("debug", cfg.Project.Debug),
 		zap.String("environment", cfg.Project.Environment),
 		zap.String("commit_hash", cfg.Project.CommitHash),
 		zap.String("version", cfg.Project.Version),
 	)
 
-	dsn := cfg.Database.String()
-	db, err := database.NewConnection(dsn, cfg.Database.Driver)
+	db, err := database.NewConnection(cfg.Database.String(), cfg.Database.Driver)
 	if err != nil {
 		logger.Fatal("database initialization", zap.Error(err))
 	}
 	defer db.Close()
 
-	if *migration != "" {
-		if err := database.Migrate(db.DB, *migration); err != nil {
+	if *migration {
+		if err = goose.Up(db.DB, cfg.Database.MigrationsDir); err != nil {
 			logger.Error("migrations initialization", zap.Error(err))
-			return
 		}
 	}
 
