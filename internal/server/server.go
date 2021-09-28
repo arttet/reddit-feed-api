@@ -31,7 +31,7 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 
-	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
+	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1"
 )
 
 type Server struct {

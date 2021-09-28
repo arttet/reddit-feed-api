@@ -28,7 +28,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api"
+	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1"
 )
 
 var _ = Describe("Reddit Feed API Server", func() {

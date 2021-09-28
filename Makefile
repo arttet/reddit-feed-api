@@ -12,21 +12,17 @@ SERVICE_EXE=./bin/$(SERVICE_NAME)$(shell go env GOEXE)
 
 ###############################################################################
 
-# https://github.com/bufbuild/buf/releases
-BUF_VERSION=v1.0.0-rc1
+.PHONY: all
+all: deps build
 
-OS_NAME=$(shell uname -s)
-OS_ARCH=$(shell uname -m)
-GOBIN?=$(GOPATH)/bin
-
-ifeq ("NT", "$(findstring NT,$(OS_NAME))")
-OS_NAME=Windows
-endif
-
-###############################################################################
+.PHONY: deps
+deps: .deps
 
 .PHONY: build
 build: generate .build
+
+.PHONY: generate
+generate: .generate
 
 .PHONY: run
 run:
@@ -74,9 +70,6 @@ grpcui:
 
 ###############################################################################
 
-.PHONY: deps
-deps: .deps
-
 .deps:
 	go env -w GO111MODULE=on
 
@@ -96,17 +89,25 @@ deps: .deps
 
 ###############################################################################
 
-.PHONY: generate
-generate: .generate
+# https://github.com/bufbuild/buf/releases
+BUF_VERSION=v1.0.0-rc2
+
+OS_NAME=$(shell uname -s)
+OS_ARCH=$(shell uname -m)
+GO_BIN=$(shell go env GOPATH)/bin
+BUF_EXE=$(GO_BIN)/buf$(shell go env GOEXE)
+
+ifeq ("NT", "$(findstring NT,$(OS_NAME))")
+OS_NAME=Windows
+endif
 
 .generate:
-	@command -v buf 2>&1 > /dev/null || (echo "Install buf" && \
-		mkdir -p "$(GOBIN)" && \
-		curl -k -sSL0 https://github.com/bufbuild/buf/releases/download/$(BUF_VERSION)/buf-$(OS_NAME)-$(OS_ARCH)$(shell go env GOEXE) -o "$(GOBIN)/buf" && \
-		chmod +x "$(GOBIN)/buf")
-	@PATH="$(GOBIN):$(PATH)" buf generate
-
-	mv pkg/$(SERVICE_NAME)/$(SERVICE_PATH)/pkg/$(SERVICE_NAME)/* pkg/$(SERVICE_NAME)
+	@ command -v buf 2>&1 > /dev/null || (echo "Install buf" && \
+		mkdir -p "$(GO_BIN)" && \
+		curl -k -sSL0 https://github.com/bufbuild/buf/releases/download/$(BUF_VERSION)/buf-$(OS_NAME)-$(OS_ARCH)$(shell go env GOEXE) -o "$(BUF_EXE)" && \
+		chmod +x "$(BUF_EXE)")
+	@ $(BUF_EXE) generate
+	cp -R pkg/$(SERVICE_NAME)/$(SERVICE_PATH)/pkg/$(SERVICE_NAME)/* pkg/$(SERVICE_NAME)/
 	rm -rf pkg/$(SERVICE_NAME)/github.com/
 	cd pkg/$(SERVICE_NAME) && ls go.mod || (go mod init $(SERVICE_PATH)/pkg/$(SERVICE_NAME) && go mod tidy)
 
