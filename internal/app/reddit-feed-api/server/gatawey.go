@@ -14,6 +14,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 
@@ -40,7 +41,7 @@ func createGatewayServer(grpcAddr, gatewayAddr string) *http.Server {
 				grpc_opentracing.WithTracer(opentracing.GlobalTracer()),
 			),
 		),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		zap.L().Fatal("failed to dial server", zap.Error(err))

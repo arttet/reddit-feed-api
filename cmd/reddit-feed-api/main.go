@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/server"
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/database"
-	"github.com/arttet/reddit-feed-api/internal/server"
-	"github.com/arttet/reddit-feed-api/internal/tracer"
+	"github.com/arttet/reddit-feed-api/internal/telemetry"
 
 	"github.com/pressly/goose/v3"
 
@@ -56,7 +56,7 @@ func main() {
 		}
 	}
 
-	tracing, err := tracer.NewTracer(&cfg)
+	tracing, err := telemetry.NewTracer(&cfg)
 	if err != nil {
 		logger.Error("tracing initialization", zap.Error(err))
 		return

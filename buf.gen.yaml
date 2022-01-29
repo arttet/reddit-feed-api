@@ -1,24 +1,24 @@
 version: v1
 plugins:
   - name: go
-    out: pkg/reddit-feed-api
+    out: pkg
     opt:
       - paths=import
   - name: go-grpc
-    out: pkg/reddit-feed-api
+    out: pkg
     opt:
       - paths=import
   - name: grpc-gateway
-    out: pkg/reddit-feed-api
+    out: pkg
     opt:
       - logtostderr=true
       - paths=import
   - name: validate
-    out: pkg/reddit-feed-api
+    out: pkg
     opt:
       - lang=go
   - name: swagger
-    out: external/swagger
+    out: api/openapi-spec
     opt:
       - allow_merge=true
       - merge_file_name=api

@@ -8,11 +8,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/arttet/reddit-feed-api/internal/api"
-	"github.com/arttet/reddit-feed-api/internal/data"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/api"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
 	"github.com/arttet/reddit-feed-api/internal/mock"
 	"github.com/arttet/reddit-feed-api/internal/model"
-	"github.com/arttet/reddit-feed-api/internal/repo"
+	"github.com/arttet/reddit-feed-api/internal/test"
 
 	"github.com/golang/mock/gomock"
 
@@ -25,7 +25,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1"
@@ -33,9 +33,9 @@ import (
 
 var _ = Describe("Reddit Feed API Server", func() {
 	var (
-		err error
-
-		ctx context.Context
+		err      error
+		ctx      context.Context
+		testData = test.LoadTestData("data/posts.yaml")
 
 		ctrl         *gomock.Controller
 		mockProducer *mock.MockProducer
@@ -50,6 +50,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		Expect(testData).ShouldNot(BeNil())
 
 		ctrl = gomock.NewController(GinkgoT())
 		Expect(ctrl).ShouldNot(BeNil())
@@ -74,9 +75,6 @@ var _ = Describe("Reddit Feed API Server", func() {
 		server = api.NewRedditFeedAPI(repository, mockProducer, logger)
 	})
 
-	JustBeforeEach(func() {
-	})
-
 	AfterEach(func() {
 		mockSQL.ExpectClose()
 		err := db.Close()
@@ -91,7 +89,6 @@ var _ = Describe("Reddit Feed API Server", func() {
 		var (
 			request  *pb.CreatePostsV1Request
 			response *pb.CreatePostsV1Response
-			testData = testDataPost
 		)
 
 		Describe("using a database", func() {
@@ -249,13 +246,13 @@ var _ = Describe("Reddit Feed API Server", func() {
 					feed := feed
 					var (
 						rows     *sqlmock.Rows
-						testData *data.TestData
+						testData *test.TestData
 						query    string
 					)
 
 					BeforeEach(func() {
-						filename := fmt.Sprintf("../data/data/%s", feed)
-						testData = data.LoadTestData(filename)
+						filename := fmt.Sprintf("data/%s", feed)
+						testData = test.LoadTestData(filename)
 						Expect(testData).ShouldNot(BeNil())
 
 						rows = sqlmock.NewRows(repo.SelectColumns)

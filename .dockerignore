@@ -1,2 +1,7 @@
 **/.git
+**/.github
 **/.vscode
+**/bin
+**/tools
+*.out
+*.md
