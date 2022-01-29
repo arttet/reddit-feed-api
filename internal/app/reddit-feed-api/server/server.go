@@ -12,10 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arttet/reddit-feed-api/internal/api"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/api"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
 	"github.com/arttet/reddit-feed-api/internal/broker"
 	"github.com/arttet/reddit-feed-api/internal/config"
-	"github.com/arttet/reddit-feed-api/internal/repo"
+	"github.com/arttet/reddit-feed-api/internal/telemetry"
 
 	"go.uber.org/zap"
 
@@ -67,7 +68,7 @@ func (s *Server) Start(cfg *config.Config) error {
 		}
 	}()
 
-	metricsServer := createMetricsServer(cfg)
+	metricsServer := telemetry.CreateMetricsServer(cfg)
 
 	go func() {
 		logger.Info("metrics server is running", zap.String("address", metricsAddr))
@@ -79,7 +80,7 @@ func (s *Server) Start(cfg *config.Config) error {
 
 	isReady := &atomic.Value{}
 	isReady.Store(false)
-	statusServer := createStatusServer(cfg, isReady)
+	statusServer := telemetry.CreateStatusServer(cfg, isReady)
 
 	go func() {
 		logger.Info("status server is running", zap.String("address", statusAdrr))

@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
 	"github.com/arttet/reddit-feed-api/internal/broker"
 	"github.com/arttet/reddit-feed-api/internal/model"
-	"github.com/arttet/reddit-feed-api/internal/repo"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

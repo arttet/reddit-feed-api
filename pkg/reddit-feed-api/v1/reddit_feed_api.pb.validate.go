@@ -11,6 +11,7 @@ import (
 	"net/mail"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -31,27 +32,65 @@ var (
 	_ = (*url.URL)(nil)
 	_ = (*mail.Address)(nil)
 	_ = anypb.Any{}
+	_ = sort.Sort
 )
 
 // Validate checks the field values on CreatePostsV1Request with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *CreatePostsV1Request) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on CreatePostsV1Request with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// CreatePostsV1RequestMultiError, or nil if none found.
+func (m *CreatePostsV1Request) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *CreatePostsV1Request) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	if l := len(m.GetPosts()); l < 1 || l > 1024 {
-		return CreatePostsV1RequestValidationError{
+		err := CreatePostsV1RequestValidationError{
 			field:  "Posts",
 			reason: "value must contain between 1 and 1024 items, inclusive",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	for idx, item := range m.GetPosts() {
 		_, _ = idx, item
 
-		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, CreatePostsV1RequestValidationError{
+						field:  fmt.Sprintf("Posts[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, CreatePostsV1RequestValidationError{
+						field:  fmt.Sprintf("Posts[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return CreatePostsV1RequestValidationError{
 					field:  fmt.Sprintf("Posts[%v]", idx),
@@ -63,8 +102,29 @@ func (m *CreatePostsV1Request) Validate() error {
 
 	}
 
+	if len(errors) > 0 {
+		return CreatePostsV1RequestMultiError(errors)
+	}
+
 	return nil
 }
+
+// CreatePostsV1RequestMultiError is an error wrapping multiple validation
+// errors returned by CreatePostsV1Request.ValidateAll() if the designated
+// constraints aren't met.
+type CreatePostsV1RequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CreatePostsV1RequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CreatePostsV1RequestMultiError) AllErrors() []error { return m }
 
 // CreatePostsV1RequestValidationError is the validation error returned by
 // CreatePostsV1Request.Validate if the designated constraints aren't met.
@@ -124,16 +184,51 @@ var _ interface {
 
 // Validate checks the field values on CreatePostsV1Response with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *CreatePostsV1Response) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on CreatePostsV1Response with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// CreatePostsV1ResponseMultiError, or nil if none found.
+func (m *CreatePostsV1Response) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *CreatePostsV1Response) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	// no validation rules for NumberOfCreatedPosts
+
+	if len(errors) > 0 {
+		return CreatePostsV1ResponseMultiError(errors)
+	}
 
 	return nil
 }
+
+// CreatePostsV1ResponseMultiError is an error wrapping multiple validation
+// errors returned by CreatePostsV1Response.ValidateAll() if the designated
+// constraints aren't met.
+type CreatePostsV1ResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CreatePostsV1ResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CreatePostsV1ResponseMultiError) AllErrors() []error { return m }
 
 // CreatePostsV1ResponseValidationError is the validation error returned by
 // CreatePostsV1Response.Validate if the designated constraints aren't met.
@@ -193,21 +288,60 @@ var _ interface {
 
 // Validate checks the field values on GenerateFeedV1Request with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *GenerateFeedV1Request) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GenerateFeedV1Request with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GenerateFeedV1RequestMultiError, or nil if none found.
+func (m *GenerateFeedV1Request) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GenerateFeedV1Request) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	if m.GetPageId() < 1 {
-		return GenerateFeedV1RequestValidationError{
+		err := GenerateFeedV1RequestValidationError{
 			field:  "PageId",
 			reason: "value must be greater than or equal to 1",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return GenerateFeedV1RequestMultiError(errors)
 	}
 
 	return nil
 }
+
+// GenerateFeedV1RequestMultiError is an error wrapping multiple validation
+// errors returned by GenerateFeedV1Request.ValidateAll() if the designated
+// constraints aren't met.
+type GenerateFeedV1RequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GenerateFeedV1RequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GenerateFeedV1RequestMultiError) AllErrors() []error { return m }
 
 // GenerateFeedV1RequestValidationError is the validation error returned by
 // GenerateFeedV1Request.Validate if the designated constraints aren't met.
@@ -267,16 +401,49 @@ var _ interface {
 
 // Validate checks the field values on GenerateFeedV1Response with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *GenerateFeedV1Response) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GenerateFeedV1Response with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GenerateFeedV1ResponseMultiError, or nil if none found.
+func (m *GenerateFeedV1Response) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GenerateFeedV1Response) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	for idx, item := range m.GetPosts() {
 		_, _ = idx, item
 
-		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, GenerateFeedV1ResponseValidationError{
+						field:  fmt.Sprintf("Posts[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, GenerateFeedV1ResponseValidationError{
+						field:  fmt.Sprintf("Posts[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return GenerateFeedV1ResponseValidationError{
 					field:  fmt.Sprintf("Posts[%v]", idx),
@@ -288,8 +455,29 @@ func (m *GenerateFeedV1Response) Validate() error {
 
 	}
 
+	if len(errors) > 0 {
+		return GenerateFeedV1ResponseMultiError(errors)
+	}
+
 	return nil
 }
+
+// GenerateFeedV1ResponseMultiError is an error wrapping multiple validation
+// errors returned by GenerateFeedV1Response.ValidateAll() if the designated
+// constraints aren't met.
+type GenerateFeedV1ResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GenerateFeedV1ResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GenerateFeedV1ResponseMultiError) AllErrors() []error { return m }
 
 // GenerateFeedV1ResponseValidationError is the validation error returned by
 // GenerateFeedV1Response.Validate if the designated constraints aren't met.
@@ -348,42 +536,72 @@ var _ interface {
 } = GenerateFeedV1ResponseValidationError{}
 
 // Validate checks the field values on Post with the rules defined in the proto
-// definition for this message. If any rules are violated, an error is returned.
+// definition for this message. If any rules are violated, the first error
+// encountered is returned, or nil if there are no violations.
 func (m *Post) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Post with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in PostMultiError, or nil if none found.
+func (m *Post) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Post) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	// no validation rules for Title
 
 	if len(m.GetAuthor()) > 11 {
-		return PostValidationError{
+		err := PostValidationError{
 			field:  "Author",
 			reason: "value length must be at most 11 bytes",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if !strings.HasPrefix(m.GetAuthor(), "t2_") {
-		return PostValidationError{
+		err := PostValidationError{
 			field:  "Author",
 			reason: "value does not have prefix \"t2_\"",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if !_Post_Author_Pattern.MatchString(m.GetAuthor()) {
-		return PostValidationError{
+		err := PostValidationError{
 			field:  "Author",
 			reason: "value does not match regex pattern \"^t2_[a-z0-9]{8}$\"",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	// no validation rules for Subreddit
 
 	if m.GetScore() < 0 {
-		return PostValidationError{
+		err := PostValidationError{
 			field:  "Score",
 			reason: "value must be greater than or equal to 0",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	// no validation rules for Promoted
@@ -395,11 +613,15 @@ func (m *Post) Validate() error {
 	case *Post_Link:
 
 		if _, err := url.Parse(m.GetLink()); err != nil {
-			return PostValidationError{
+			err = PostValidationError{
 				field:  "Link",
 				reason: "value must be a valid URI",
 				cause:  err,
 			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
 		}
 
 	case *Post_Content:
@@ -407,8 +629,28 @@ func (m *Post) Validate() error {
 
 	}
 
+	if len(errors) > 0 {
+		return PostMultiError(errors)
+	}
+
 	return nil
 }
+
+// PostMultiError is an error wrapping multiple validation errors returned by
+// Post.ValidateAll() if the designated constraints aren't met.
+type PostMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m PostMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m PostMultiError) AllErrors() []error { return m }
 
 // PostValidationError is the validation error returned by Post.Validate if the
 // designated constraints aren't met.

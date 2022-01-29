@@ -1,9 +1,9 @@
 ---
 BasedOnStyle: Google
----
 Language: Proto
 AlignConsecutiveAssignments: AcrossComments
 AlignConsecutiveBitFields: AcrossComments
 AlignConsecutiveDeclarations: AcrossComments
 AlignConsecutiveMacros: AcrossComments
 AlignOperands: AlignAfterOperator
+---

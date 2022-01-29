@@ -1,0 +1,37 @@
+FROM golang:1.17 AS builder
+
+ARG GITHUB_PATH=github.com/arttet/reddit-feed-api
+ARG VERSION COMMIT_HASH
+
+COPY Makefile /home/${GITHUB_PATH}/Makefile
+COPY go.mod /home/${GITHUB_PATH}/go.mod
+COPY go.sum /home/${GITHUB_PATH}/go.sum
+COPY pkg /home/${GITHUB_PATH}/pkg
+
+WORKDIR /home/${GITHUB_PATH}
+RUN make reqs
+RUN make deps
+
+COPY . /home/${GITHUB_PATH}
+RUN make build
+
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+
+FROM golang:1.17 AS server
+
+ARG GITHUB_PATH=github.com/arttet/reddit-feed-api
+ARG SERVICE_NAME=reddit-feed-api
+LABEL org.opencontainers.image.source https://${GITHUB_PATH}
+
+RUN apt-get update && apt-get install -y curl ca-certificates
+
+WORKDIR /root/
+
+COPY --from=builder /go/bin/dlv .
+COPY --from=builder /home/${GITHUB_PATH}/bin/${SERVICE_NAME} .
+COPY --from=builder /home/${GITHUB_PATH}/configs/${SERVICE_NAME}/config.yml .
+COPY --from=builder /home/${GITHUB_PATH}/migrations/${SERVICE_NAME}/001_init_db.sql ./migrations/
+
+RUN chown root:root ${SERVICE_NAME}
+ENTRYPOINT ["./dlv", "--listen=:40000", "--headless=true", "--api-version=2", "--log", "--accept-multiclient", "exec", "./reddit-feed-api"]
