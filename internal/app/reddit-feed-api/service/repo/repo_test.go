@@ -8,20 +8,22 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
 	"github.com/arttet/reddit-feed-api/internal/model"
-	"github.com/arttet/reddit-feed-api/internal/repo"
+	"github.com/arttet/reddit-feed-api/internal/test"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Repo", func() {
 	var (
-		err    error
-		errRow = fmt.Errorf("row error")
+		err      error
+		errRow   = fmt.Errorf("row error")
+		testData = test.LoadTestData("data/posts.yaml")
 
 		ctx context.Context
 
@@ -36,15 +38,14 @@ var _ = Describe("Repo", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
+		Expect(testData).ShouldNot(BeNil())
+
 		db, mockSQL, err = sqlmock.New()
 		Expect(err).Should(BeNil())
 		sqlxDB = sqlx.NewDb(db, "sqlmock")
 		Expect(sqlxDB).ShouldNot(BeNil())
 
 		repository = repo.NewRepo(sqlxDB)
-	})
-
-	JustBeforeEach(func() {
 	})
 
 	AfterEach(func() {

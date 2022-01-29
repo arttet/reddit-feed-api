@@ -1,13 +1,18 @@
-package data
+package test
 
 import (
-	"io/ioutil"
+	"embed"
 
 	"github.com/arttet/reddit-feed-api/internal/model"
 
 	"go.uber.org/zap"
 
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	//go:embed data
+	resources embed.FS
 )
 
 type TestData struct {
@@ -17,7 +22,7 @@ type TestData struct {
 }
 
 func LoadTestData(filename string) *TestData {
-	file, err := ioutil.ReadFile(filename)
+	file, err := resources.ReadFile(filename)
 	if err != nil {
 		zap.L().Fatal("failed to read the file",
 			zap.String("file", filename),

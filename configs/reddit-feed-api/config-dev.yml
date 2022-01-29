@@ -1,8 +1,8 @@
 project:
   name: Reddit Feed API
   debug: true
-  environment: production
-  swaggerDir: external/swagger
+  environment: development
+  swaggerDir: api/openapi-spec
 
 grpc:
   host: 0.0.0.0
@@ -16,31 +16,35 @@ rest:
   port: 8081
 
 logger:
-  level: info
+  level: debug
   encoding: json
   outputPaths:
     - stdout
+    - bin/logs.json
   errorOutputPaths:
     - stdout
+    - bin/errors.json
   encoderConfig:
-    messageKey: msg
-    levelKey: lvl
+    messageKey: message
+    levelKey: level
     levelEncoder: lowercase
     timeKey: time
     timeEncoder: iso8601
+    callerKey: file
+    callerEncoder: file:line
 
 database:
-  host: postgres
+  host: 0.0.0.0
   port: 5432
   user: docker
   password: docker
   name: reddit_feed_api
   sslmode: disable
-  migrationsDir: migrations
+  migrationsDir: migrations/reddit-feed-api
   driver: pgx
 
 jaeger:
-  host: jaeger
+  host: 0.0.0.0
   port: 6831
   service: reddit-feed-api
 
@@ -50,7 +54,7 @@ metrics:
   path: /metrics
 
 status:
-  host: 0.0.0.0
+  host: localhost
   port: 8000
   livenessPath: /live
   readinessPath: /ready
@@ -58,9 +62,8 @@ status:
   versionPath: /version
 
 kafka:
-  capacity: 512
+  capacity: 64
   topic: reddit-feed-events
   groupId: reddit-feed-api
   brokers:
-    - kafka:9092
-    - localhost:9094
+    - localhost:9092

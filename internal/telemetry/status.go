@@ -1,4 +1,4 @@
-package server
+package telemetry
 
 import (
 	"encoding/json"
@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func createStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server {
+func CreateStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server {
 	statusAddr := fmt.Sprintf("%s:%v", cfg.Status.Host, cfg.Status.Port)
 
 	mux := http.DefaultServeMux

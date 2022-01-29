@@ -1,4 +1,4 @@
-package server
+package telemetry
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func createMetricsServer(cfg *config.Config) *http.Server {
+func CreateMetricsServer(cfg *config.Config) *http.Server {
 	addr := fmt.Sprintf("%s:%d", cfg.Metrics.Host, cfg.Metrics.Port)
 
 	mux := http.DefaultServeMux
