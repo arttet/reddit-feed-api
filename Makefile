@@ -1,6 +1,6 @@
 GO_VERSION_SHORT:=$(shell echo `go version` | sed -E 's/.* go(.*) .*/\1/g')
 ifneq ("1.17","$(shell printf "$(GO_VERSION_SHORT)\n1.17" | sort -V | head -1)")
-$(error NEED GO VERSION >= 1.17. Found: $(GO_VERSION_SHORT))
+$(warning NEED GO VERSION >= 1.17. Found: $(GO_VERSION_SHORT))
 endif
 
 GITHUB_PATH=github.com/arttet/reddit-feed-api
@@ -54,9 +54,6 @@ cover:
 grpcui:
 	grpcui -plaintext localhost:8082
 
-.PHONY: pprof
-pprof: .pprof-cpu
-
 .PHONY: image
 image: .image
 
@@ -66,13 +63,13 @@ debug-image: .debug-image
 .PHONY: clean
 clean:
 	rm -rd ./bin/ || true
-	docker rm -f $(docker ps -a -q) || true
-	docker volume rm $(docker volume ls -q) || true
+	docker rm -f $(shell docker ps -a -q) || true
+	docker volume rm $(shell docker volume ls -q) || true
 
 ################################################################################
 
 # https://github.com/bufbuild/buf/releases
-BUF_VERSION=v1.0.0-rc10
+BUF_VERSION=v1.0.0-rc11
 
 OS_NAME=$(shell uname -s)
 OS_ARCH=$(shell uname -m)
@@ -94,13 +91,15 @@ endif
 .PHONY: .deps-go
 .deps-go:
 	go mod download
-	go install github.com/golang/mock/mockgen@latest
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go install github.com/bold-commerce/protoc-gen-struct-transformer@latest
 	go install github.com/envoyproxy/protoc-gen-validate@latest
+	go install github.com/gogo/protobuf/protoc-gen-gogofaster@latest
+	go install github.com/golang/mock/mockgen@latest
 	go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@latest
 	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
 ################################################################################
 
@@ -109,7 +108,8 @@ endif
 .generate-mock:
 	go generate ./...
 
-.generate-reddit-feed-api: $(eval SERVICE_NAME := reddit-feed-api) .generate-template
+.generate-reddit-feed-api: $(eval SERVICE_NAME := reddit-feed-api) .generate-template; \
+	rm -rf pkg/reddit
 
 .generate-template:
 	@ echo $(SERVICE_NAME)
@@ -159,13 +159,5 @@ endif
 
 .debug-image-template:
 	docker build . --file deployments/docker/$(SERVICE_NAME)/Dockerfile.debug --tag $(SERVICE_NAME):debug
-
-################################################################################
-
-.pprof-cpu:
-	go tool pprof http://localhost:8000/debug/pprof/profile?seconds=30
-
-.pprof-mem:
-	go tool pprof -alloc_space http://localhost:8000/debug/pprof/heap
 
 ################################################################################

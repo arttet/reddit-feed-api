@@ -1,44 +1,52 @@
 package telemetry
 
 import (
-	"fmt"
-	"io"
-
-	"github.com/opentracing/opentracing-go"
-	"github.com/uber/jaeger-client-go"
-	"go.uber.org/zap"
-
 	"github.com/arttet/reddit-feed-api/internal/config"
 
-	jaegercfg "github.com/uber/jaeger-client-go/config"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 // NewTracer returns a new tracer.
-func NewTracer(cfg *config.Config) (io.Closer, error) {
-	tracerAddr := fmt.Sprintf("%s:%v", cfg.Jaeger.Host, cfg.Jaeger.Port)
-
-	cfgTracer := &jaegercfg.Configuration{
-		ServiceName: cfg.Jaeger.Service,
-		Sampler: &jaegercfg.SamplerConfig{
-			Type:  jaeger.SamplerTypeConst,
-			Param: 1,
-		},
-		Reporter: &jaegercfg.ReporterConfig{
-			LogSpans:           true,
-			LocalAgentHostPort: tracerAddr,
-		},
-	}
-
-	logger := zap.L()
-
-	tracer, closer, err := cfgTracer.NewTracer(jaegercfg.Logger(jaeger.StdLogger))
+func NewTracer(cfg *config.Config) (*tracesdk.TracerProvider, error) {
+	tp, err := tracerProvider(cfg)
 	if err != nil {
-		logger.Fatal("failed to init Jaeger", zap.Error(err))
 		return nil, err
 	}
 
-	opentracing.SetGlobalTracer(tracer)
-	logger.Info("tracer started")
+	// Register our TracerProvider as the global so any imported
+	// instrumentation in the future will default to using it.
+	otel.SetTracerProvider(tp)
 
-	return closer, nil
+	return tp, nil
+}
+
+// tracerProvider returns an OpenTelemetry TracerProvider configured to use
+// the Jaeger exporter that will send spans to the provided url. The returned
+// TracerProvider will also use a Resource configured with all the information
+// about the application.
+func tracerProvider(cfg *config.Config) (*tracesdk.TracerProvider, error) {
+	// Create the Jaeger exporter
+	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(cfg.Jaeger.URL)))
+	if err != nil {
+		return nil, err
+	}
+
+	tp := tracesdk.NewTracerProvider(
+		// Always be sure to batch in production.
+		tracesdk.WithBatcher(exp),
+		// Record information about this application in a Resource.
+		tracesdk.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String(cfg.Jaeger.Service),
+			semconv.ServiceVersionKey.String(cfg.Project.Version),
+			attribute.String("environment", cfg.Project.Environment),
+		)),
+	)
+
+	return tp, nil
 }

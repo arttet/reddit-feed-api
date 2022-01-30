@@ -5,3 +5,4 @@ deps:
   - buf.build/envoyproxy/protoc-gen-validate
   - buf.build/googleapis/googleapis
   - buf.build/grpc-ecosystem/grpc-gateway
+  - buf.build/innovation-upstream/protoc-gen-struct-transformer
