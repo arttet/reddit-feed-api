@@ -7,13 +7,32 @@ project:
 grpc:
   host: 0.0.0.0
   port: 8082
-  maxConnectionIdle: 5 # Minutes
-  timeout: 15 # Seconds
-  maxConnectionAge: 5 # Minutes
+  maxConnectionIdle: 5m
+  timeout: 15s
+  maxConnectionAge: 5m
 
 rest:
   host: 0.0.0.0
-  port: 8081
+  port: 8080
+
+database:
+  host: postgres
+  port: 5432
+  user: docker
+  password: docker
+  name: reddit_feed_api
+  sslmode: disable
+  migrationsDir: migrations
+  driver: pgx
+
+jaeger:
+  url: http://jaeger:14268/api/traces
+  service: reddit-feed-api
+
+metrics:
+  host: 0.0.0.0
+  port: 9100
+  path: /metrics
 
 logger:
   level: info
@@ -29,33 +48,15 @@ logger:
     timeKey: time
     timeEncoder: iso8601
 
-database:
-  host: postgres
-  port: 5432
-  user: docker
-  password: docker
-  name: reddit_feed_api
-  sslmode: disable
-  migrationsDir: migrations
-  driver: pgx
-
-jaeger:
-  host: jaeger
-  port: 6831
-  service: reddit-feed-api
-
-metrics:
-  host: 0.0.0.0
-  port: 9100
-  path: /metrics
-
 status:
   host: 0.0.0.0
   port: 8000
   livenessPath: /live
   readinessPath: /ready
-  swaggerPath: /debug/swagger/
   versionPath: /version
+  loggerPath: /log/level
+  swaggerDir: api/openapi-spec
+  swaggerPath: /swagger/
 
 kafka:
   capacity: 64

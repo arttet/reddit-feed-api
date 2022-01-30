@@ -35,7 +35,7 @@ func (m *MockProducer) EXPECT() *MockProducerMockRecorder {
 }
 
 // CreatePosts mocks base method.
-func (m *MockProducer) CreatePosts(arg0 []model.Post) {
+func (m *MockProducer) CreatePosts(arg0 model.Posts) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "CreatePosts", arg0)
 }

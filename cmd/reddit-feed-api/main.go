@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"log"
+	"time"
 
 	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/server"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
+	"github.com/arttet/reddit-feed-api/internal/broker"
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/database"
 	"github.com/arttet/reddit-feed-api/internal/telemetry"
-
-	"github.com/pressly/goose/v3"
+	"github.com/pressly/goose"
 
 	"go.uber.org/zap"
 
@@ -23,17 +27,15 @@ func main() {
 	flag.Parse()
 
 	if err := config.ReadConfigYML(*configYML); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	cfg := config.GetConfigInstance()
 
-	logger, err := cfg.Logger.Build()
+	logger, err := telemetry.NewLogger(&cfg.Logger)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	zap.ReplaceGlobals(logger)
-	defer logger.Sync() // nolint:errcheck
 
 	logger.Info("starting service",
 		zap.String("name", cfg.Project.Name),
@@ -56,14 +58,19 @@ func main() {
 		}
 	}
 
-	tracing, err := telemetry.NewTracer(&cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	producer, err := broker.NewProducer(ctx, &cfg.Kafka, logger)
 	if err != nil {
-		logger.Error("tracing initialization", zap.Error(err))
+		logger.Error("failed to create a producer", zap.Error(err))
 		return
 	}
-	defer tracing.Close()
+	logger.Info("the Kafka producer is running", zap.Strings("brokers", cfg.Kafka.Brokers))
 
-	if err := server.NewServer(logger, db).Start(&cfg); err != nil {
+	repository := repo.NewRepo(db)
+
+	if err := server.NewServer(producer, repository, logger).Start(&cfg); err != nil {
 		logger.Error("server initialization", zap.Error(err))
 	}
 }

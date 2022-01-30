@@ -19,31 +19,39 @@ import (
 	"github.com/arttet/reddit-feed-api/internal/telemetry"
 
 	"go.uber.org/zap"
-
-	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap/zapcore"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
-	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpc_otel "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1"
 )
 
 type Server struct {
-	logger *zap.Logger
-	db     *sqlx.DB
+	producer   broker.Producer
+	repository repo.Repo
+	logger     *zap.Logger
 }
 
-func NewServer(logger *zap.Logger, db *sqlx.DB) *Server {
+func NewServer(
+	producer broker.Producer,
+	repository repo.Repo,
+	logger *zap.Logger,
+) *Server {
+
 	return &Server{
-		logger: logger,
-		db:     db,
+		producer:   producer,
+		repository: repository,
+		logger:     logger,
 	}
 }
 
@@ -51,36 +59,55 @@ func (s *Server) Start(cfg *config.Config) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	gatewayAddr := fmt.Sprintf("%s:%v", cfg.REST.Host, cfg.REST.Port)
-	grpcAddr := fmt.Sprintf("%s:%v", cfg.GRPC.Host, cfg.GRPC.Port)
-	metricsAddr := fmt.Sprintf("%s:%v", cfg.Metrics.Host, cfg.Metrics.Port)
+	metricAddr := fmt.Sprintf("%s:%v", cfg.Metrics.Host, cfg.Metrics.Port)
 	statusAdrr := fmt.Sprintf("%s:%v", cfg.Status.Host, cfg.Status.Port)
 
-	gatewayServer := createGatewayServer(grpcAddr, gatewayAddr)
+	gatewayAddr := fmt.Sprintf("%s:%v", cfg.REST.Host, cfg.REST.Port)
+	grpcAddr := fmt.Sprintf("%s:%v", cfg.GRPC.Host, cfg.GRPC.Port)
 
 	logger := s.logger
 
-	go func() {
-		logger.Info("gateway server is running", zap.String("address", gatewayAddr))
-		if err := gatewayServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("failed running gateway server", zap.Error(err))
-			cancel()
+	/**
+	 *  OpenTelemetry Tracer
+	 **/
+
+	tp, err := telemetry.NewTracer(cfg)
+	if err != nil {
+		logger.Error("tracing initialization", zap.Error(err))
+		return err
+	}
+
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			logger.Error("tracer shut down", zap.Error(err))
+		} else {
+			logger.Info("tracer shut down correctly")
 		}
 	}()
+
+	logger.Info("tracer is running", zap.String("address", cfg.Jaeger.URL))
+
+	/**
+	 * Metric Server
+	 **/
 
 	metricsServer := telemetry.CreateMetricsServer(cfg)
 
 	go func() {
-		logger.Info("metrics server is running", zap.String("address", metricsAddr))
+		logger.Info("metrics server is running", zap.String("address", metricAddr))
 		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("failed running metrics server", zap.Error(err))
 			cancel()
 		}
 	}()
 
+	/**
+	 * Status Server
+	 **/
+
 	isReady := &atomic.Value{}
 	isReady.Store(false)
-	statusServer := telemetry.CreateStatusServer(cfg, isReady)
+	statusServer := telemetry.NewStatusServer(cfg, isReady)
 
 	go func() {
 		logger.Info("status server is running", zap.String("address", statusAdrr))
@@ -90,37 +117,64 @@ func (s *Server) Start(cfg *config.Config) error {
 		}
 	}()
 
+	/**
+	 * Gateway
+	 **/
+
+	gatewayServer := createGatewayServer(grpcAddr, gatewayAddr)
+
+	go func() {
+		logger.Info("gateway server is running", zap.String("address", gatewayAddr))
+		if err := gatewayServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("failed running gateway server", zap.Error(err))
+			cancel()
+		}
+	}()
+
+	/**
+	 * gRPC
+	 **/
+
 	listener, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
 	defer listener.Close()
 
+	opts := []grpc_zap.Option{
+		grpc_zap.WithDurationField(func(duration time.Duration) zapcore.Field {
+			return zap.Int64("grpc.time_ns", duration.Nanoseconds())
+		}),
+	}
+
 	grpcServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			MaxConnectionIdle: time.Duration(cfg.GRPC.MaxConnectionIdle) * time.Minute,
-			Timeout:           time.Duration(cfg.GRPC.Timeout) * time.Second,
-			MaxConnectionAge:  time.Duration(cfg.GRPC.MaxConnectionAge) * time.Minute,
-			Time:              time.Duration(cfg.GRPC.Timeout) * time.Minute,
+			MaxConnectionIdle: cfg.GRPC.MaxConnectionIdle,
+			Timeout:           cfg.GRPC.Timeout,
+			MaxConnectionAge:  cfg.GRPC.MaxConnectionAge,
+			Time:              cfg.GRPC.Timeout,
 		}),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_ctxtags.UnaryServerInterceptor(),
 			grpc_prometheus.UnaryServerInterceptor,
-			grpc_opentracing.UnaryServerInterceptor(),
-			grpcrecovery.UnaryServerInterceptor(),
+			grpc_otel.UnaryServerInterceptor(),
+			grpc_zap.UnaryServerInterceptor(logger, opts...),
+			grpc_recovery.UnaryServerInterceptor(),
+			grpc_validator.UnaryServerInterceptor(),
+		)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc_ctxtags.StreamServerInterceptor(),
+			grpc_prometheus.StreamServerInterceptor,
+			grpc_otel.StreamServerInterceptor(),
+			grpc_zap.StreamServerInterceptor(logger, opts...),
+			grpc_recovery.StreamServerInterceptor(),
+			grpc_validator.StreamServerInterceptor(),
 		)),
 	)
 
-	producer, err := broker.NewProducer(ctx, &cfg.Kafka, logger)
-	if err != nil {
-		return fmt.Errorf("failed to create a producer: %w", err)
-	}
-	logger.Info("the Kafka producer is running", zap.Strings("brokers", cfg.Kafka.Brokers))
-
-	repository := repo.NewRepo(s.db)
 	pb.RegisterRedditFeedAPIServiceServer(
 		grpcServer,
-		api.NewRedditFeedAPI(repository, producer, logger),
+		api.NewRedditFeedAPI(s.repository, s.producer, logger),
 	)
 
 	grpc_prometheus.EnableHandlingTimeHistogram()

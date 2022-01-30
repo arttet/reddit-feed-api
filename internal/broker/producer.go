@@ -8,16 +8,24 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/model"
-
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.uber.org/zap"
 
 	"github.com/Shopify/sarama"
 )
 
+var (
+	tracer trace.Tracer
+)
+
+func init() {
+	tracer = otel.Tracer("github.com/arttet/reddit-feed-api/internal/broker")
+}
+
 type Producer interface {
-	CreatePosts(offers []model.Post)
+	CreatePosts(offers model.Posts)
 }
 
 type producer struct {
@@ -70,7 +78,7 @@ func NewProducer(
 	return p, nil
 }
 
-func (p *producer) CreatePosts(posts []model.Post) {
+func (p *producer) CreatePosts(posts model.Posts) {
 	result := make(map[string]interface{}, len(posts))
 	for i, post := range posts {
 		result[fmt.Sprintf("%d", i)] = post
@@ -87,8 +95,8 @@ func (p *producer) send(
 	value map[string]interface{},
 ) error {
 
-	span := opentracing.GlobalTracer().StartSpan(spanName)
-	defer span.Finish()
+	_, span := tracer.Start(context.Background(), spanName)
+	defer span.End()
 
 	bytes, err := json.Marshal(
 		message{

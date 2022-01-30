@@ -6,15 +6,22 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/model"
 
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 )
 
+var tracer trace.Tracer
+
+func init() {
+	tracer = otel.Tracer("github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo")
+}
+
 type Repo interface {
-	CreatePosts(ctx context.Context, posts []model.Post) (int64, error)
-	ListPosts(ctx context.Context, limit uint64, offset uint64) ([]model.Post, error)
+	CreatePosts(ctx context.Context, posts model.Posts) (int64, error)
+	ListPosts(ctx context.Context, limit uint64, offset uint64) (model.Posts, error)
 	GetPromotedPost(ctx context.Context) (*model.Post, error)
 }
 
@@ -45,14 +52,14 @@ type repo struct {
 
 func (r *repo) CreatePosts(
 	ctx context.Context,
-	posts []model.Post,
+	posts model.Posts,
 ) (
 	int64,
 	error,
 ) {
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "CreatePosts")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "CreatePosts")
+	defer span.End()
 
 	query := squirrel.Insert(TableName).
 		Columns(InsertColumns...).
@@ -85,12 +92,12 @@ func (r *repo) ListPosts(
 	limit uint64,
 	offset uint64,
 ) (
-	[]model.Post,
+	model.Posts,
 	error,
 ) {
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "ListPosts")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "ListPosts")
+	defer span.End()
 
 	query := squirrel.Select(SelectColumns...).
 		From(TableName).
@@ -106,10 +113,10 @@ func (r *repo) ListPosts(
 	}
 	defer rows.Close()
 
-	posts := make([]model.Post, 0, limit)
+	posts := make(model.Posts, 0, limit)
 	for rows.Next() {
-		var post model.Post
-		scanRow(rows, &post)
+		post := &model.Post{}
+		scanRow(rows, post)
 		posts = append(posts, post)
 	}
 
@@ -127,8 +134,8 @@ func (r *repo) GetPromotedPost(
 	error,
 ) {
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "GetPromotedPost")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "GetPromotedPost")
+	defer span.End()
 
 	query := squirrel.Select(SelectColumns...).
 		From(TableName).

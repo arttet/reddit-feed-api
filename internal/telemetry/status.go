@@ -9,15 +9,16 @@ import (
 	"strings"
 	"sync/atomic"
 
-	// nolint:godot
-	// _ "net/http/pprof"
+	// nolint:gosec
+	_ "net/http/pprof"
 
 	"github.com/arttet/reddit-feed-api/internal/config"
 
 	"go.uber.org/zap"
 )
 
-func CreateStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server {
+// NewStatusServer returns a new status server.
+func NewStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server {
 	statusAddr := fmt.Sprintf("%s:%v", cfg.Status.Host, cfg.Status.Port)
 
 	mux := http.DefaultServeMux
@@ -26,9 +27,8 @@ func CreateStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server 
 	mux.HandleFunc(cfg.Status.ReadinessPath, readinessHandler(isReady))
 	mux.HandleFunc(cfg.Status.VersionPath, versionHandler(cfg))
 
-	if cfg.Project.Debug {
-		mux.HandleFunc(cfg.Status.SwaggerPath, swaggerHandler(cfg))
-	}
+	mux.HandleFunc(cfg.Status.LoggerPath, cfg.Logger.Level.ServeHTTP)
+	mux.HandleFunc(cfg.Status.SwaggerPath, swaggerHandler(cfg))
 
 	statusServer := &http.Server{
 		Addr:    statusAddr,
@@ -46,33 +46,10 @@ func readinessHandler(isReady *atomic.Value) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		if isReady == nil || !isReady.Load().(bool) {
 			http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func swaggerHandler(cfg *config.Config) func(w http.ResponseWriter, _ *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		logger := zap.S()
-
-		if !strings.HasSuffix(r.URL.Path, ".swagger.json") {
-			logger.Errorw("swagger JSON not found %v", r.URL.Path)
-			http.NotFound(w, r)
-			return
-		}
-
-		logger.Infow("Serving %s", r.URL.Path)
-
-		filepath := strings.TrimPrefix(r.URL.Path, cfg.Status.SwaggerPath)
-		filepath = path.Join(cfg.Project.SwaggerDir, filepath)
-
-		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			http.NotFound(w, r)
-			return
-		}
-
-		http.ServeFile(w, r, filepath)
 	}
 }
 
@@ -91,5 +68,31 @@ func versionHandler(cfg *config.Config) func(w http.ResponseWriter, _ *http.Requ
 		if err := json.NewEncoder(w).Encode(data); err != nil {
 			zap.L().Error("Service information encoding error", zap.Error(err))
 		}
+	}
+}
+
+func swaggerHandler(cfg *config.Config) func(w http.ResponseWriter, _ *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		logger := zap.S()
+
+		if !strings.HasSuffix(r.URL.Path, "swagger.json") {
+			logger.Errorw("swagger JSON not found %v", r.URL.Path)
+			http.NotFound(w, r)
+
+			return
+		}
+
+		logger.Infow("Serving %s", r.URL.Path)
+
+		filepath := strings.TrimPrefix(r.URL.Path, cfg.Status.SwaggerPath)
+		filepath = path.Join(cfg.Status.SwaggerDir, filepath)
+
+		if _, err := os.Stat(filepath); os.IsNotExist(err) {
+			http.NotFound(w, r)
+
+			return
+		}
+
+		http.ServeFile(w, r, filepath)
 	}
 }

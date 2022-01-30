@@ -176,53 +176,6 @@ var _ = Describe("Reddit Feed API Server", func() {
 				})
 			})
 		})
-
-		Context("when fails to create because of an empty argument", func() {
-			BeforeEach(func() {
-				request = &pb.CreatePostsV1Request{
-					Posts: nil,
-				}
-				response, err = server.CreatePostsV1(ctx, request)
-			})
-
-			It("should return an empty response", func() {
-				Expect(response).Should(BeNil())
-				Expect(status.Convert(err).Code()).Should(Equal(codes.InvalidArgument))
-			})
-		})
-
-		Context("when fails to create because of an invalid argument", func() {
-			for _, post := range testData.WrongPosts {
-				post := post
-
-				BeforeEach(func() {
-					result := pb.Post{
-						Title:          post.Title,
-						Author:         post.Author,
-						Subreddit:      post.Subreddit,
-						Score:          post.Score,
-						Promoted:       post.Promoted,
-						NotSafeForWork: post.NotSafeForWork,
-					}
-					if post.Link != "" {
-						result.PostType = &pb.Post_Link{Link: post.Link}
-					} else {
-						result.PostType = &pb.Post_Content{Content: post.Content}
-					}
-
-					request = &pb.CreatePostsV1Request{
-						Posts: []*pb.Post{&result},
-					}
-
-					response, err = server.CreatePostsV1(ctx, request)
-				})
-
-				It("should return an empty response", func() {
-					Expect(response).Should(BeNil())
-					Expect(status.Convert(err).Code()).Should(Equal(codes.InvalidArgument))
-				})
-			}
-		})
 	})
 
 	// ////////////////////////////////////////////////////////////////////////
@@ -400,20 +353,6 @@ var _ = Describe("Reddit Feed API Server", func() {
 						Expect(status.Convert(err).Code()).Should(Equal(codes.NotFound))
 					})
 				})
-			})
-		})
-
-		Context("when fails to generate because of an empty argument", func() {
-			BeforeEach(func() {
-				request = &pb.GenerateFeedV1Request{
-					PageId: 0,
-				}
-				response, err = server.GenerateFeedV1(ctx, request)
-			})
-
-			It("should return an empty response", func() {
-				Expect(response).Should(BeNil())
-				Expect(status.Convert(err).Code()).Should(Equal(codes.InvalidArgument))
 			})
 		})
 	})

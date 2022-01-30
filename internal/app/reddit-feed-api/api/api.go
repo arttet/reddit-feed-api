@@ -6,27 +6,33 @@ import (
 	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
 	"github.com/arttet/reddit-feed-api/internal/broker"
 	"github.com/arttet/reddit-feed-api/internal/model"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"go.uber.org/zap"
 
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/log"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1"
+	"github.com/arttet/reddit-feed-api/pkg/transform"
 )
 
 var (
+	tracer trace.Tracer
+
 	totalFeedNotFound = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "reddit_feed_api_feed_not_found_total",
 		Help: "The total number of feeds that were not found",
 	})
 )
+
+func init() {
+	tracer = otel.Tracer("github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/api")
+}
 
 type api struct {
 	pb.UnimplementedRedditFeedAPIServiceServer
@@ -58,31 +64,7 @@ func (a *api) CreatePostsV1(
 	error,
 ) {
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "CreatePostsV1")
-	defer span.Finish()
-	span.LogFields(
-		log.Int("len", len(request.Posts)),
-	)
-
-	if err := request.Validate(); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	var numberOfCreatedPosts int64
-	posts := make([]model.Post, 0, len(request.Posts))
-	for i := range request.Posts {
-		post := model.Post{
-			Title:          request.Posts[i].Title,
-			Author:         request.Posts[i].Author,
-			Link:           request.Posts[i].GetLink(),
-			Subreddit:      request.Posts[i].Subreddit,
-			Content:        request.Posts[i].GetContent(),
-			Score:          request.Posts[i].Score,
-			Promoted:       request.Posts[i].Promoted,
-			NotSafeForWork: request.Posts[i].NotSafeForWork,
-		}
-		posts = append(posts, post)
-	}
+	posts := transform.PbToPostPtrList(request.Posts)
 
 	numberOfCreatedPosts, err := a.repository.CreatePosts(ctx, posts)
 	if err != nil {
@@ -107,16 +89,6 @@ func (a *api) GenerateFeedV1(
 	error,
 ) {
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "GenerateFeedV1")
-	defer span.Finish()
-	span.LogFields(
-		log.Uint64("PageId", request.PageId),
-	)
-
-	if err := request.Validate(); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	posts, err := a.repository.ListPosts(ctx, a.maxCountPosts, a.maxCountPosts*(request.PageId-1))
 	if err != nil {
 		a.logger.Error("failed to list the data", zap.Error(err))
@@ -138,13 +110,13 @@ func (a *api) GenerateFeedV1(
 
 func (a *api) filterPosts(
 	ctx context.Context,
-	posts []model.Post,
+	posts model.Posts,
 ) (
 	list []*pb.Post,
 ) {
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "filterPosts")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "filterPosts")
+	defer span.End()
 
 	n := len(posts)
 
@@ -161,7 +133,7 @@ func (a *api) filterPosts(
 	list = make([]*pb.Post, 0, n)
 	counter := 0
 
-	pushBack := func(post model.Post) {
+	pushBack := func(post *model.Post) {
 		result := &pb.Post{
 			Title:          post.Title,
 			Author:         post.Author,
@@ -186,7 +158,7 @@ func (a *api) filterPosts(
 		}
 
 		if promotedPost != nil && (counter == 1 || counter == 15) && !posts[i].NotSafeForWork && !posts[i-1].NotSafeForWork {
-			pushBack(*promotedPost)
+			pushBack(promotedPost)
 		}
 
 		if post.Promoted && counter > 0 && list[counter-1].NotSafeForWork {

@@ -16,9 +16,9 @@ var (
 )
 
 type TestData struct {
-	Posts         []model.Post `yaml:"posts"`
-	WrongPosts    []model.Post `yaml:"wrongPosts"`
-	PromotedPosts []model.Post `yaml:"promotedPosts"`
+	Posts         model.Posts `yaml:"posts"`
+	WrongPosts    model.Posts `yaml:"wrongPosts"`
+	PromotedPosts model.Posts `yaml:"promotedPosts"`
 }
 
 func LoadTestData(filename string) *TestData {
