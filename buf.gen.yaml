@@ -17,6 +17,11 @@ plugins:
     out: pkg
     opt:
       - lang=go
+  - name: struct-transformer
+    out: pkg
+    opt:
+      - package=transform
+      - goimports=true
   - name: swagger
     out: api/openapi-spec
     opt:

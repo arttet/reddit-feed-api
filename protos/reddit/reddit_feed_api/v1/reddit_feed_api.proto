@@ -3,10 +3,15 @@ syntax = "proto3";
 package reddit.reddit_feed_api.v1;
 
 import "google/api/annotations.proto";
+import "options/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 import "validate/validate.proto";
 
 option go_package = "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1;reddit_feed_api";
+
+option (transformer.go_repo_package)     = "model";
+option (transformer.go_protobuf_package) = "pb";
+option (transformer.go_models_file_path) = "internal/model/post.go";
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -65,13 +70,14 @@ message GenerateFeedV1Response {
 ///////////////////////////////////////////////////////////////////////////////
 
 message Post {
-  string title     = 1;
-  string author    = 2 [(validate.rules).string = {
+  option (transformer.go_struct) = "Post";
+  string title                   = 1;
+  string author                  = 2 [(validate.rules).string = {
     max_bytes: 11,
     prefix: "t2_",
     pattern: "^t2_[a-z0-9]{8}$",
   }];
-  string subreddit = 3;
+  string subreddit               = 3;
   oneof  post_type {
     string link    = 4 [(validate.rules).string.uri_ref = true];
     string content = 5;

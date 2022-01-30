@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
@@ -48,11 +49,11 @@ type Database struct {
 
 // GRPC contains all parameters of gRPC.
 type GRPC struct {
-	Host              string `yaml:"host"`
-	Port              int    `yaml:"port"`
-	MaxConnectionIdle int64  `yaml:"maxConnectionIdle"`
-	Timeout           int64  `yaml:"timeout"`
-	MaxConnectionAge  int64  `yaml:"maxConnectionAge"`
+	Host              string        `yaml:"host"`
+	Port              int           `yaml:"port"`
+	MaxConnectionIdle time.Duration `yaml:"maxConnectionIdle"`
+	Timeout           time.Duration `yaml:"timeout"`
+	MaxConnectionAge  time.Duration `yaml:"maxConnectionAge"`
 }
 
 // REST contains all parameters of REST.
@@ -63,8 +64,7 @@ type REST struct {
 
 // Jaeger contains all parameters tracer information.
 type Jaeger struct {
-	Host    string `yaml:"host"`
-	Port    int    `yaml:"port"`
+	URL     string `yaml:"url"`
 	Service string `yaml:"service"`
 }
 
@@ -81,8 +81,10 @@ type Status struct {
 	Port          int    `yaml:"port"`
 	LivenessPath  string `yaml:"livenessPath"`
 	ReadinessPath string `yaml:"readinessPath"`
-	SwaggerPath   string `yaml:"swaggerPath"`
 	VersionPath   string `yaml:"versionPath"`
+	LoggerPath    string `yaml:"loggerPath"`
+	SwaggerDir    string `yaml:"swaggerDir"`
+	SwaggerPath   string `yaml:"swaggerPath"`
 }
 
 // Kafka contains all parameters Kafka information.

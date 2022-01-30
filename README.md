@@ -5,7 +5,6 @@
 [![tests](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/arttet/reddit-feed-api/branch/main/graph/badge.svg?token=S5a5aZsotj)](https://codecov.io/gh/arttet/reddit-feed-api)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/arttet/reddit-feed-api/blob/main/LICENSE)
-[![](https://img.shields.io/github/v/release/arttet/reddit-feed-api?style=flat-square)](https://github.com/arttet/reddit-feed-api/releases)
 
 ## Build project
 

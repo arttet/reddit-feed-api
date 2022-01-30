@@ -11,3 +11,5 @@ type Post struct {
 	Promoted       bool   `db:"promoted"          yaml:"promoted"`
 	NotSafeForWork bool   `db:"not_safe_for_work" yaml:"notSafeForWork"`
 }
+
+type Posts []*Post

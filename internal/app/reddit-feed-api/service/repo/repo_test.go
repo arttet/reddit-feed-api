@@ -124,7 +124,7 @@ var _ = Describe("Repo", func() {
 		var (
 			exec   *sqlmock.ExpectedQuery
 			rows   *sqlmock.Rows
-			result []model.Post
+			result model.Posts
 		)
 
 		BeforeEach(func() {
