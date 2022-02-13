@@ -1,0 +1,19 @@
+posts:
+  - author: t2_00000001
+  - author: t2_00000002
+  - author: t2_00000003
+
+promotedPosts:
+  - title: Promoted Post
+    author: t2_00000099
+    promoted: true
+
+feed:
+  - author: t2_00000001
+
+  - title: Promoted Post
+    author: t2_00000099
+    promoted: true
+
+  - author: t2_00000002
+  - author: t2_00000003

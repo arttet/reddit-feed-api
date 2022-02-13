@@ -6,8 +6,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/api"
 	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/server"
-	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/feed"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repository"
 	"github.com/arttet/reddit-feed-api/internal/broker"
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/database"
@@ -68,9 +70,14 @@ func main() {
 	}
 	logger.Info("the Kafka producer is running", zap.Strings("brokers", cfg.Kafka.Brokers))
 
-	repository := repo.NewRepo(db)
+	repo := repository.NewRepository(db)
+	srv := api.NewRedditFeedAPIServiceServer(
+		feed.NewFeed(repo, logger),
+		producer,
+		logger,
+	)
 
-	if err := server.NewServer(producer, repository, logger).Start(&cfg); err != nil {
+	if err := server.NewServer(srv, logger).Serve(&cfg); err != nil {
 		logger.Error("server initialization", zap.Error(err))
 	}
 }

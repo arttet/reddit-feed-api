@@ -13,3 +13,17 @@ type Post struct {
 }
 
 type Posts []*Post
+
+// Value converts Post to a primitive value ready to written to a database.
+func (p *Post) Values() []interface{} {
+	return []interface{}{
+		p.Title,
+		p.Author,
+		p.Link,
+		p.Subreddit,
+		p.Content,
+		p.Score,
+		p.Promoted,
+		p.NotSafeForWork,
+	}
+}

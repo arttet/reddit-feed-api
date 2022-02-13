@@ -1,0 +1,11 @@
+posts:
+  - author: t2_00000001
+    score: 0
+  - author: t2_00000002
+    score: 100
+
+feed:
+  - author: t2_00000002
+    score: 100
+  - author: t2_00000001
+    score: 0
