@@ -1,4 +1,4 @@
-package repo
+package repository
 
 import (
 	"context"
@@ -13,19 +13,14 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var tracer trace.Tracer
-
-func init() {
-	tracer = otel.Tracer("github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo")
-}
-
-type Repo interface {
+type Repository interface {
 	CreatePosts(ctx context.Context, posts model.Posts) (int64, error)
 	ListPosts(ctx context.Context, limit uint64, offset uint64) (model.Posts, error)
 	GetPromotedPost(ctx context.Context) (*model.Post, error)
 }
 
-func NewRepo(db *sqlx.DB) Repo {
+// NewRepository creates a new instance of Repository Service.
+func NewRepository(db *sqlx.DB) Repository {
 	return &repo{
 		db: db,
 	}
@@ -33,31 +28,32 @@ func NewRepo(db *sqlx.DB) Repo {
 
 const TableName = "post"
 
-var InsertColumns = []string{
-	"title",
-	"author",
-	"link",
-	"subreddit",
-	"content",
-	"score",
-	"promoted",
-	"not_safe_for_work",
-}
+var (
+	InsertColumns = []string{
+		"title",
+		"author",
+		"link",
+		"subreddit",
+		"content",
+		"score",
+		"promoted",
+		"not_safe_for_work",
+	}
 
-var SelectColumns = append([]string{"id"}, InsertColumns...)
+	SelectColumns = append([]string{"id"}, InsertColumns...)
+
+	tracer trace.Tracer
+)
+
+func init() {
+	tracer = otel.Tracer("github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repository")
+}
 
 type repo struct {
 	db *sqlx.DB
 }
 
-func (r *repo) CreatePosts(
-	ctx context.Context,
-	posts model.Posts,
-) (
-	int64,
-	error,
-) {
-
+func (r *repo) CreatePosts(ctx context.Context, posts model.Posts) (int64, error) {
 	ctx, span := tracer.Start(ctx, "CreatePosts")
 	defer span.End()
 
@@ -67,16 +63,7 @@ func (r *repo) CreatePosts(
 		RunWith(r.db)
 
 	for i := range posts {
-		query = query.Values(
-			posts[i].Title,
-			posts[i].Author,
-			posts[i].Link,
-			posts[i].Subreddit,
-			posts[i].Content,
-			posts[i].Score,
-			posts[i].Promoted,
-			posts[i].NotSafeForWork,
-		)
+		query = query.Values(posts[i].Values()...)
 	}
 
 	result, err := query.ExecContext(ctx)
@@ -87,15 +74,7 @@ func (r *repo) CreatePosts(
 	return result.RowsAffected()
 }
 
-func (r *repo) ListPosts(
-	ctx context.Context,
-	limit uint64,
-	offset uint64,
-) (
-	model.Posts,
-	error,
-) {
-
+func (r *repo) ListPosts(ctx context.Context, limit uint64, offset uint64) (model.Posts, error) {
 	ctx, span := tracer.Start(ctx, "ListPosts")
 	defer span.End()
 
@@ -127,13 +106,7 @@ func (r *repo) ListPosts(
 	return posts, nil
 }
 
-func (r *repo) GetPromotedPost(
-	ctx context.Context,
-) (
-	*model.Post,
-	error,
-) {
-
+func (r *repo) GetPromotedPost(ctx context.Context) (*model.Post, error) {
 	ctx, span := tracer.Start(ctx, "GetPromotedPost")
 	defer span.End()
 

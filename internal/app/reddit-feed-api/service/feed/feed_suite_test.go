@@ -1,4 +1,4 @@
-package repo_test
+package feed_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestRepo(t *testing.T) {
+func TestFeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Repo Suite")
+	RunSpecs(t, "Feed Suite")
 }

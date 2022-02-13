@@ -30,7 +30,7 @@ test:
 
 .PHONY: bench
 bench:
-	go test -cpuprofile cpu.prof -memprofile mem.prof -bench ./...
+	go test -bench ./... -benchmem -cpuprofile cpu.out -memprofile mem.out -memprofilerate 1
 
 .PHONY: lint
 lint:
@@ -69,7 +69,7 @@ clean:
 ################################################################################
 
 # https://github.com/bufbuild/buf/releases
-BUF_VERSION=v1.0.0-rc11
+BUF_VERSION=v1.0.0-rc12
 
 OS_NAME=$(shell uname -s)
 OS_ARCH=$(shell uname -m)
