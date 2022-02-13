@@ -19,6 +19,7 @@ type TestData struct {
 	Posts         model.Posts `yaml:"posts"`
 	WrongPosts    model.Posts `yaml:"wrongPosts"`
 	PromotedPosts model.Posts `yaml:"promotedPosts"`
+	Feed          model.Posts `yaml:"feed"`
 }
 
 func LoadTestData(filename string) *TestData {

@@ -12,9 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/api"
-	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
-	"github.com/arttet/reddit-feed-api/internal/broker"
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/telemetry"
 
@@ -37,25 +34,18 @@ import (
 )
 
 type Server struct {
-	producer   broker.Producer
-	repository repo.Repo
-	logger     *zap.Logger
+	srv    pb.RedditFeedAPIServiceServer
+	logger *zap.Logger
 }
 
-func NewServer(
-	producer broker.Producer,
-	repository repo.Repo,
-	logger *zap.Logger,
-) *Server {
-
+func NewServer(srv pb.RedditFeedAPIServiceServer, logger *zap.Logger) *Server {
 	return &Server{
-		producer:   producer,
-		repository: repository,
-		logger:     logger,
+		srv:    srv,
+		logger: logger,
 	}
 }
 
-func (s *Server) Start(cfg *config.Config) error {
+func (s *Server) Serve(cfg *config.Config) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -172,11 +162,7 @@ func (s *Server) Start(cfg *config.Config) error {
 		)),
 	)
 
-	pb.RegisterRedditFeedAPIServiceServer(
-		grpcServer,
-		api.NewRedditFeedAPI(s.repository, s.producer, logger),
-	)
-
+	pb.RegisterRedditFeedAPIServiceServer(grpcServer, s.srv)
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(grpcServer)
 

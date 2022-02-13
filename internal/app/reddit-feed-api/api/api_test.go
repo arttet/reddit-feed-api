@@ -3,15 +3,13 @@ package api_test
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/api"
-	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repo"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/feed"
+	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repository"
 	"github.com/arttet/reddit-feed-api/internal/mock"
-	"github.com/arttet/reddit-feed-api/internal/model"
 	"github.com/arttet/reddit-feed-api/internal/test"
 
 	"github.com/golang/mock/gomock"
@@ -29,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	pb "github.com/arttet/reddit-feed-api/pkg/reddit-feed-api/v1"
+	"github.com/arttet/reddit-feed-api/pkg/transform"
 )
 
 var _ = Describe("Reddit Feed API Server", func() {
@@ -44,8 +43,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 		db     *sql.DB
 		sqlxDB *sqlx.DB
 
-		repository repo.Repo
-		server     pb.RedditFeedAPIServiceServer
+		server pb.RedditFeedAPIServiceServer
 	)
 
 	BeforeEach(func() {
@@ -71,16 +69,10 @@ var _ = Describe("Reddit Feed API Server", func() {
 		logger, _ := config.Build()
 		defer logger.Sync()
 
-		repository = repo.NewRepo(sqlxDB)
-		server = api.NewRedditFeedAPI(repository, mockProducer, logger)
-	})
+		repo := repository.NewRepository(sqlxDB)
+		feed := feed.NewFeed(repo, logger)
 
-	AfterEach(func() {
-		mockSQL.ExpectClose()
-		err := db.Close()
-		Expect(err).Should(BeNil())
-
-		ctrl.Finish()
+		server = api.NewRedditFeedAPIServiceServer(feed, mockProducer, logger)
 	})
 
 	// ////////////////////////////////////////////////////////////////////////
@@ -93,45 +85,12 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 		Describe("using a database", func() {
 			var (
-				exec   *sqlmock.ExpectedExec
-				values []driver.Value
-				posts  []*pb.Post
+				exec *sqlmock.ExpectedExec
 			)
 
 			BeforeEach(func() {
-				values = make([]driver.Value, 0, reflect.TypeOf(model.Post{}).NumField()*len(testData.Posts))
-				for _, post := range testData.Posts {
-					values = append(values,
-						post.Title,
-						post.Author,
-						post.Link,
-						post.Subreddit,
-						post.Content,
-						post.Score,
-						post.Promoted,
-						post.NotSafeForWork,
-					)
-				}
-
-				posts = make([]*pb.Post, 0, len(testData.Posts))
-				for _, post := range testData.Posts {
-					result := &pb.Post{
-						Title:          post.Title,
-						Author:         post.Author,
-						Subreddit:      post.Subreddit,
-						Score:          post.Score,
-						Promoted:       post.Promoted,
-						NotSafeForWork: post.NotSafeForWork,
-					}
-					if post.Link != "" {
-						result.PostType = &pb.Post_Link{Link: post.Link}
-					} else {
-						result.PostType = &pb.Post_Content{Content: post.Content}
-					}
-					posts = append(posts, result)
-				}
-
-				exec = mockSQL.ExpectExec(fmt.Sprintf("INSERT INTO %s", repo.TableName)).
+				values := test.PostToValuePtrValList(testData.Posts)
+				exec = mockSQL.ExpectExec(fmt.Sprintf("INSERT INTO %s", repository.TableName)).
 					WithArgs(values...)
 			})
 
@@ -147,7 +106,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 					exec.WillReturnResult(sqlmock.NewResult(lastInsertID, rowsAffected))
 
 					request = &pb.CreatePostsV1Request{
-						Posts: posts,
+						Posts: transform.PostToPbPtrList(testData.Posts),
 					}
 
 					response, err = server.CreatePostsV1(ctx, request)
@@ -164,7 +123,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 					exec.WillReturnError(sql.ErrConnDone)
 
 					request = &pb.CreatePostsV1Request{
-						Posts: posts,
+						Posts: transform.PostToPbPtrList(testData.Posts),
 					}
 
 					response, err = server.CreatePostsV1(ctx, request)
@@ -182,9 +141,8 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 	Describe("generating a new feed", func() {
 		const (
-			feedLimit     = 27
-			promotedLimit = 1
-			offset        = 0
+			feedLimit = 27
+			offset    = 0
 		)
 
 		var (
@@ -208,27 +166,12 @@ var _ = Describe("Reddit Feed API Server", func() {
 						testData = test.LoadTestData(filename)
 						Expect(testData).ShouldNot(BeNil())
 
-						rows = sqlmock.NewRows(repo.SelectColumns)
-						for i, post := range testData.Posts {
-							if i == feedLimit {
-								break
-							}
+						rows = sqlmock.NewRows(repository.SelectColumns)
+						rows = test.PostToRowPtrList(testData.Posts, rows, feedLimit)
 
-							rows.AddRow(
-								post.ID,
-								post.Title,
-								post.Author,
-								post.Link,
-								post.Subreddit,
-								post.Content,
-								post.Score,
-								post.Promoted,
-								post.NotSafeForWork,
-							)
-						}
 						query = fmt.Sprintf("SELECT %s FROM %s ORDER BY score DESC LIMIT %d OFFSET %d",
-							strings.Join(repo.SelectColumns, ", "),
-							repo.TableName,
+							strings.Join(repository.SelectColumns, ", "),
+							repository.TableName,
 							feedLimit,
 							offset,
 						)
@@ -239,28 +182,9 @@ var _ = Describe("Reddit Feed API Server", func() {
 							mockSQL.ExpectQuery(query).WillReturnRows(rows)
 
 							promotedQuery := fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
-								strings.Join(repo.SelectColumns, ", "),
-								repo.TableName,
+								strings.Join(repository.SelectColumns, ", "),
+								repository.TableName,
 							)
-
-							promotedRows := sqlmock.NewRows(repo.SelectColumns)
-							for i, post := range testData.PromotedPosts {
-								if i == promotedLimit {
-									break
-								}
-
-								promotedRows.AddRow(
-									post.ID,
-									post.Title,
-									post.Author,
-									post.Link,
-									post.Subreddit,
-									post.Content,
-									post.Score,
-									post.Promoted,
-									post.NotSafeForWork,
-								)
-							}
 
 							mockSQL.ExpectQuery(promotedQuery).
 								WithArgs(true).
@@ -284,8 +208,8 @@ var _ = Describe("Reddit Feed API Server", func() {
 							mockSQL.ExpectQuery(query).WillReturnRows(rows)
 
 							query = fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
-								strings.Join(repo.SelectColumns, ", "),
-								repo.TableName,
+								strings.Join(repository.SelectColumns, ", "),
+								repository.TableName,
 							)
 							mockSQL.ExpectQuery(query).WithArgs(true).
 								WillReturnError(sql.ErrNoRows)
@@ -312,8 +236,8 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 				BeforeEach(func() {
 					query := fmt.Sprintf("SELECT %s FROM %s ORDER BY score DESC LIMIT %d OFFSET %d",
-						strings.Join(repo.SelectColumns, ", "),
-						repo.TableName,
+						strings.Join(repository.SelectColumns, ", "),
+						repository.TableName,
 						feedLimit,
 						offset,
 					)
@@ -339,7 +263,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 				Context("when fails to generate because of a not found error", func() {
 					BeforeEach(func() {
-						exec.WillReturnRows(sqlmock.NewRows(repo.SelectColumns))
+						exec.WillReturnRows(sqlmock.NewRows(repository.SelectColumns))
 
 						request = &pb.GenerateFeedV1Request{
 							PageId: 1,
