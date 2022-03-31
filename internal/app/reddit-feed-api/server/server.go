@@ -188,7 +188,7 @@ func (s *Server) Serve(cfg *config.Config) error {
 
 	select {
 	case v := <-quit:
-		logger.Info("", zap.String("signal.Notify", fmt.Sprintf("%v", v)))
+		logger.Info("", zap.String("signal.Notify", v.String()))
 	case done := <-ctx.Done():
 		logger.Info("", zap.String("ctx.Done", fmt.Sprintf("%v", done)))
 	}

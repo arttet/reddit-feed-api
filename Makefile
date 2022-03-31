@@ -1,6 +1,6 @@
 GO_VERSION_SHORT:=$(shell echo `go version` | sed -E 's/.* go(.*) .*/\1/g')
-ifneq ("1.17","$(shell printf "$(GO_VERSION_SHORT)\n1.17" | sort -V | head -1)")
-$(warning NEED GO VERSION >= 1.17. Found: $(GO_VERSION_SHORT))
+ifneq ("1.18","$(shell printf "$(GO_VERSION_SHORT)\n1.18" | sort -V | head -1)")
+$(warning NEED GO VERSION >= 1.18. Found: $(GO_VERSION_SHORT))
 endif
 
 GITHUB_PATH=github.com/arttet/reddit-feed-api
