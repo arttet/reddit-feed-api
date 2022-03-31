@@ -20,12 +20,14 @@ jobs:
           linter_errors=$(git-clang-format-12 --commit "HEAD~1" --style file --diff --extensions proto -q || true)
           echo "$linter_errors"
           if [ ! -z "$linter_errors" ]; then echo "Detected formatting issues; please fix"; exit 1; else echo "Formatting is correct"; exit 0; fi
+
   buf-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: bufbuild/buf-setup-action@v0.3.1
       - uses: bufbuild/buf-lint-action@v0.3.0
+
   golangci:
     name: lint
     runs-on: ubuntu-latest
@@ -34,4 +36,4 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.42
+          version: v1.45
