@@ -1,4 +1,5 @@
 -- +goose Up
+
 INSERT INTO post
   (title, author, link, subreddit, content, score, promoted, not_safe_for_work)
 VALUES
@@ -21,4 +22,5 @@ VALUES
   ('Title', 't2_00000017', 'https://reddit.com', 'SubReddit', '', 0, true, false);
 
 -- +goose Down
+
 DELETE FROM post;

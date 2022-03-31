@@ -3,36 +3,27 @@ name: linters
 on: [push, pull_request]
 
 jobs:
-  clang-format:
-    name: clang-format
+  formatting-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 2
-      - name: Set clang-format-12
-        run: |
-          sudo update-alternatives --remove-all clang-format
-          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 100
-      - name: Style
-        run: |
-          linter_errors=$(git-clang-format-12 --commit "HEAD~1" --style file --diff --extensions proto -q || true)
-          echo "$linter_errors"
-          if [ ! -z "$linter_errors" ]; then echo "Detected formatting issues; please fix"; exit 1; else echo "Formatting is correct"; exit 0; fi
+    - uses: actions/checkout@v3
+    - name: Run clang-format style check for Protobuf programs
+      uses: jidicula/clang-format-action@v4.6.2
+      with:
+        clang-format-version: '14'
+        check-path: 'protos'
 
   buf-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: bufbuild/buf-setup-action@v0.3.1
-      - uses: bufbuild/buf-lint-action@v0.3.0
+      - uses: actions/checkout@v3
+      - uses: bufbuild/buf-setup-action@v1.3.1
+      - uses: bufbuild/buf-lint-action@v1
 
   golangci:
-    name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:

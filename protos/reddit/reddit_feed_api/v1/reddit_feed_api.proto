@@ -73,9 +73,9 @@ message Post {
   option (transformer.go_struct) = "Post";
   string title                   = 1;
   string author                  = 2 [(validate.rules).string = {
-    max_bytes: 11,
-    prefix: "t2_",
-    pattern: "^t2_[a-z0-9]{8}$",
+                     max_bytes: 11,
+                     prefix: "t2_",
+                     pattern: "^t2_[a-z0-9]{8}$",
   }];
   string subreddit               = 3;
   oneof  post_type {
