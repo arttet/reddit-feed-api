@@ -43,8 +43,8 @@ tidy:
 
 .PHONY: fmt
 fmt:
-	find . -iname *.go | xargs gofmt -w
-	find . -iname *.proto | xargs clang-format -i
+	find . -iname "*.go" | xargs gofmt -w
+	find . -iname "*.proto" | xargs clang-format -i
 
 .PHONY: cover
 cover:
@@ -69,7 +69,7 @@ clean:
 ################################################################################
 
 # https://github.com/bufbuild/buf/releases
-BUF_VERSION=v1.0.0-rc12
+BUF_VERSION=v1.3.1
 
 OS_NAME=$(shell uname -s)
 OS_ARCH=$(shell uname -m)

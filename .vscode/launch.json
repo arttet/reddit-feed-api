@@ -24,7 +24,7 @@
             ],
         },
         {
-            "name": "Debug Service",
+            "name": "Docker & Delve: Reddit Feed API",
             "type": "go",
             "request": "attach",
             "mode": "remote",
