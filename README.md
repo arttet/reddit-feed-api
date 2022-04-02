@@ -74,7 +74,6 @@ docker-compose up -d
     * [/live](http://localhost:8000/live)- Layed whether the server is running
     * [/ready](http://localhost:8000/ready) - Is it ready to accept requests?
     * [/version](http://localhost:8000/version) - Version and assembly information
-    * [/debug/swagger/{swagger_file}](http://localhost:8000/debug/swagger/api.swagger.json) - Show a Swagger file in debug mode
     * [/debug/pprof](http://localhost:8000/debug/pprof) - Profiles when profiling enables
 
 ### [Apache Kafka](https://kafka.apache.org/)

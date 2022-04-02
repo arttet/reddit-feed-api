@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"path"
-	"strings"
 	"sync/atomic"
 
 	// nolint:gosec
@@ -28,7 +25,6 @@ func NewStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server {
 	mux.HandleFunc(cfg.Status.VersionPath, versionHandler(cfg))
 
 	mux.HandleFunc(cfg.Status.LoggerPath, cfg.Logger.Level.ServeHTTP)
-	mux.HandleFunc(cfg.Status.SwaggerPath, swaggerHandler(cfg))
 
 	statusServer := &http.Server{
 		Addr:    statusAddr,
@@ -68,31 +64,5 @@ func versionHandler(cfg *config.Config) func(w http.ResponseWriter, _ *http.Requ
 		if err := json.NewEncoder(w).Encode(data); err != nil {
 			zap.L().Error("Service information encoding error", zap.Error(err))
 		}
-	}
-}
-
-func swaggerHandler(cfg *config.Config) func(w http.ResponseWriter, _ *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		logger := zap.S()
-
-		if !strings.HasSuffix(r.URL.Path, "swagger.json") {
-			logger.Errorw("swagger JSON not found %v", r.URL.Path)
-			http.NotFound(w, r)
-
-			return
-		}
-
-		logger.Infow("Serving %s", r.URL.Path)
-
-		filepath := strings.TrimPrefix(r.URL.Path, cfg.Status.SwaggerPath)
-		filepath = path.Join(cfg.Status.SwaggerDir, filepath)
-
-		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			http.NotFound(w, r)
-
-			return
-		}
-
-		http.ServeFile(w, r, filepath)
 	}
 }
