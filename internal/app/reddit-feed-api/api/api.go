@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/feed"
 	"github.com/arttet/reddit-feed-api/internal/broker"
@@ -81,14 +83,14 @@ func (a *api) GenerateFeedV1(
 
 	posts, err := a.srv.GenerateFeed(ctx, request.PageId)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			a.logger.Warn("a feed not found")
+			totalFeedNotFound.Inc()
+			return nil, status.Error(codes.NotFound, "a feed not found")
+		}
+
 		a.logger.Error("failed to list the data", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if len(posts) == 0 {
-		a.logger.Warn("a feed not found")
-		totalFeedNotFound.Inc()
-		return nil, status.Error(codes.NotFound, "a feed not found")
 	}
 
 	response := &pb.GenerateFeedV1Response{

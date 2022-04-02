@@ -4,6 +4,7 @@
 [![build](https://github.com/arttet/reddit-feed-api/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/arttet/reddit-feed-api/actions/workflows/build.yml)
 [![tests](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/arttet/reddit-feed-api/branch/main/graph/badge.svg?token=S5a5aZsotj)](https://codecov.io/gh/arttet/reddit-feed-api)
+[![Go Report Card](https://goreportcard.com/badge/github.com/arttet/reddit-feed-api)](https://goreportcard.com/report/github.com/arttet/reddit-feed-api)
 [![Swagger Validator](https://img.shields.io/swagger/valid/3.0?specUrl=https%3A%2F%2Fraw.githubusercontent.com%2Farttet%2Freddit-feed-api%2Fmain%2Fapi%2Fopenapi-spec%2Fapi.swagger.json)](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/arttet/reddit-feed-api/main/api/openapi-spec/api.swagger.json)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/arttet/reddit-feed-api/blob/main/LICENSE)
 
