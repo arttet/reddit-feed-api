@@ -1,6 +1,5 @@
 promotedPosts:
-  - id: 1
-    title: Promoted Post 1
+  - title: Promoted Post 1
     author: t2_00000000
     link: https://reddit.com
     subreddit: SubReddit

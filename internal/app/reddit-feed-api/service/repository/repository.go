@@ -4,13 +4,15 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/arttet/reddit-feed-api/internal/database"
 	"github.com/arttet/reddit-feed-api/internal/model"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Repository interface {
@@ -57,18 +59,37 @@ func (r *repo) CreatePosts(ctx context.Context, posts model.Posts) (int64, error
 	ctx, span := tracer.Start(ctx, "CreatePosts")
 	defer span.End()
 
-	query := squirrel.Insert(TableName).
-		Columns(InsertColumns...).
-		PlaceholderFormat(squirrel.Dollar).
-		RunWith(r.db)
+	var (
+		result sql.Result
+		err    error
+	)
 
-	for i := range posts {
-		query = query.Values(posts[i].Values()...)
-	}
+	err = database.WithTx(ctx, r.db, func(ctx context.Context, tx *sqlx.Tx) error {
+		sb := squirrel.StatementBuilder.
+			Insert(TableName).
+			Columns(InsertColumns...).
+			PlaceholderFormat(squirrel.Dollar).
+			RunWith(r.db)
 
-	result, err := query.ExecContext(ctx)
+		for _, p := range posts {
+			sb = sb.Values(
+				p.Title,
+				p.Author,
+				p.Link,
+				p.Subreddit,
+				p.Content,
+				p.Score,
+				p.Promoted,
+				p.NotSafeForWork,
+			)
+		}
+
+		result, err = sb.ExecContext(ctx)
+		return err
+	})
+
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "repo.Add")
 	}
 
 	return result.RowsAffected()
@@ -78,29 +99,31 @@ func (r *repo) ListPosts(ctx context.Context, limit uint64, offset uint64) (mode
 	ctx, span := tracer.Start(ctx, "ListPosts")
 	defer span.End()
 
-	query := squirrel.Select(SelectColumns...).
-		From(TableName).
-		OrderBy("score DESC").
-		Limit(limit).
-		Offset(offset).
-		PlaceholderFormat(squirrel.Dollar).
-		RunWith(r.db)
+	var posts model.Posts
 
-	rows, err := query.QueryContext(ctx)
+	err := database.WithTx(ctx, r.db, func(ctx context.Context, tx *sqlx.Tx) error {
+		sb := squirrel.Select(SelectColumns...).
+			From(TableName).
+			OrderBy("score DESC").
+			Limit(limit).
+			Offset(offset).
+			PlaceholderFormat(squirrel.Dollar).
+			RunWith(r.db)
+
+		query, args, err := sb.ToSql()
+		if err != nil {
+			return err
+		}
+
+		return r.db.SelectContext(ctx, &posts, query, args...)
+	})
+
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	posts := make(model.Posts, 0, limit)
-	for rows.Next() {
-		post := &model.Post{}
-		scanRow(rows, post)
-		posts = append(posts, post)
+		return nil, errors.Wrap(err, "repo.ListPosts")
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
+	if len(posts) == 0 {
+		return nil, errors.Wrap(sql.ErrNoRows, "repo.ListPosts")
 	}
 
 	return posts, nil
@@ -110,43 +133,32 @@ func (r *repo) GetPromotedPost(ctx context.Context) (*model.Post, error) {
 	ctx, span := tracer.Start(ctx, "GetPromotedPost")
 	defer span.End()
 
-	query := squirrel.Select(SelectColumns...).
-		From(TableName).
-		Where(squirrel.Eq{"promoted": true}).
-		OrderBy("score DESC").
-		Limit(1).
-		PlaceholderFormat(squirrel.Dollar).
-		RunWith(r.db)
+	var promotedPost model.Posts
 
-	rows, err := query.QueryContext(ctx)
+	err := database.WithTx(ctx, r.db, func(ctx context.Context, tx *sqlx.Tx) error {
+		sb := squirrel.Select(SelectColumns...).
+			From(TableName).
+			Where(squirrel.Eq{"promoted": true}).
+			OrderBy("score DESC").
+			Limit(1).
+			PlaceholderFormat(squirrel.Dollar).
+			RunWith(r.db)
+
+		query, args, err := sb.ToSql()
+		if err != nil {
+			return err
+		}
+
+		return r.db.SelectContext(ctx, &promotedPost, query, args...)
+	})
+
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var promotedPost model.Post
-	if rows.Next() {
-		scanRow(rows, &promotedPost)
+		return nil, errors.Wrap(err, "repo.GetPromotedPost")
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
+	if len(promotedPost) == 0 {
+		return nil, errors.Wrap(sql.ErrNoRows, "repo.GetPromotedPost")
 	}
 
-	return &promotedPost, nil
-}
-
-func scanRow(rows *sql.Rows, post *model.Post) {
-	// nolint:errcheck
-	rows.Scan(
-		&post.ID,
-		&post.Title,
-		&post.Author,
-		&post.Link,
-		&post.Subreddit,
-		&post.Content,
-		&post.Score,
-		&post.Promoted,
-		&post.NotSafeForWork,
-	)
+	return promotedPost[0], nil
 }

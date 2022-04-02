@@ -11,14 +11,13 @@ import (
 	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repository"
 	"github.com/arttet/reddit-feed-api/internal/mock"
 	"github.com/arttet/reddit-feed-api/internal/test"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/golang/mock/gomock"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
@@ -32,35 +31,37 @@ import (
 
 var _ = Describe("Reddit Feed API Server", func() {
 	var (
-		err      error
-		ctx      context.Context
 		testData = test.LoadTestData("data/posts.yaml")
+
+		err error
+
+		ctx context.Context
 
 		ctrl         *gomock.Controller
 		mockProducer *mock.MockProducer
 		mockSQL      sqlmock.Sqlmock
-
-		db     *sql.DB
-		sqlxDB *sqlx.DB
+		db           *sql.DB
+		sqlxDB       *sqlx.DB
 
 		server pb.RedditFeedAPIServiceServer
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
 		Expect(testData).ShouldNot(BeNil())
+
+		ctx = context.Background()
 
 		ctrl = gomock.NewController(GinkgoT())
 		Expect(ctrl).ShouldNot(BeNil())
+
+		mockProducer = mock.NewMockProducer(ctrl)
+		Expect(mockProducer).ShouldNot(BeNil())
+		mockProducer.EXPECT().CreatePosts(gomock.Any()).AnyTimes()
 
 		db, mockSQL, err = sqlmock.New()
 		Expect(err).Should(BeNil())
 		sqlxDB = sqlx.NewDb(db, "sqlmock")
 		Expect(sqlxDB).ShouldNot(BeNil())
-
-		mockProducer = mock.NewMockProducer(ctrl)
-		Expect(mockProducer).ShouldNot(BeNil())
-		mockProducer.EXPECT().CreatePosts(gomock.Any()).AnyTimes()
 
 		config := zap.NewDevelopmentConfig()
 		config.Level.SetLevel(zapcore.PanicLevel)
@@ -85,30 +86,21 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 		Describe("using a database", func() {
 			var (
-				exec *sqlmock.ExpectedExec
+				query  = fmt.Sprintf("INSERT INTO %s", repository.TableName)
+				values = test.PostToValuePtrValList(testData.Posts)
 			)
 
-			BeforeEach(func() {
-				values := test.PostToValuePtrValList(testData.Posts)
-				exec = mockSQL.ExpectExec(fmt.Sprintf("INSERT INTO %s", repository.TableName)).
-					WithArgs(values...)
-			})
-
-			Context("when creates successfully", func() {
-				var (
-					lastInsertID int64
-					rowsAffected int64
-				)
-
+			Context("when creates successfully", Label("CreatePostsV1"), func() {
 				BeforeEach(func() {
-					lastInsertID = int64(len(testData.Posts))
-					rowsAffected = lastInsertID
-					exec.WillReturnResult(sqlmock.NewResult(lastInsertID, rowsAffected))
+					lastInsertID := int64(len(testData.Posts))
+					rowsAffected := lastInsertID
 
-					request = &pb.CreatePostsV1Request{
-						Posts: transform.PostToPbPtrList(testData.Posts),
-					}
+					mockSQL.ExpectBegin()
+					mockSQL.ExpectExec(query).WithArgs(values...).WillReturnResult(sqlmock.NewResult(lastInsertID, rowsAffected))
+					mockSQL.ExpectCommit()
+					mockSQL.ExpectClose()
 
+					request = &pb.CreatePostsV1Request{Posts: transform.PostToPbPtrList(testData.Posts)}
 					response, err = server.CreatePostsV1(ctx, request)
 				})
 
@@ -118,14 +110,14 @@ var _ = Describe("Reddit Feed API Server", func() {
 				})
 			})
 
-			Context("when fails to create because of a database connection error", func() {
+			Context("when fails to create because of a database connection error", Label("CreatePostsV1"), func() {
 				BeforeEach(func() {
-					exec.WillReturnError(sql.ErrConnDone)
+					mockSQL.ExpectBegin()
+					mockSQL.ExpectExec(query).WithArgs(values...).WillReturnError(sql.ErrConnDone)
+					mockSQL.ExpectCommit()
+					mockSQL.ExpectClose()
 
-					request = &pb.CreatePostsV1Request{
-						Posts: transform.PostToPbPtrList(testData.Posts),
-					}
-
+					request = &pb.CreatePostsV1Request{Posts: transform.PostToPbPtrList(testData.Posts)}
 					response, err = server.CreatePostsV1(ctx, request)
 				})
 
@@ -143,6 +135,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 		const (
 			feedLimit = 27
 			offset    = 0
+			pageId    = 1
 		)
 
 		var (
@@ -151,14 +144,27 @@ var _ = Describe("Reddit Feed API Server", func() {
 		)
 
 		Describe("using a database", func() {
+			var (
+				query = fmt.Sprintf("SELECT %s FROM %s ORDER BY score DESC LIMIT %d OFFSET %d",
+					strings.Join(repository.SelectColumns, ", "),
+					repository.TableName,
+					feedLimit,
+					offset,
+				)
+				promotedPostQuery = fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
+					strings.Join(repository.SelectColumns, ", "),
+					repository.TableName,
+				)
+			)
+
 			Context("when generates successfully", func() {
 				filenames := []string{"feed1.yaml", "feed2.yaml"}
 				for _, feed := range filenames {
 					feed := feed
 					var (
-						rows     *sqlmock.Rows
-						testData *test.TestData
-						query    string
+						rows            *sqlmock.Rows
+						promotedPostRow *sqlmock.Rows
+						testData        *test.TestData
 					)
 
 					BeforeEach(func() {
@@ -169,55 +175,48 @@ var _ = Describe("Reddit Feed API Server", func() {
 						rows = sqlmock.NewRows(repository.SelectColumns)
 						rows = test.PostToRowPtrList(testData.Posts, rows, feedLimit)
 
-						query = fmt.Sprintf("SELECT %s FROM %s ORDER BY score DESC LIMIT %d OFFSET %d",
-							strings.Join(repository.SelectColumns, ", "),
-							repository.TableName,
-							feedLimit,
-							offset,
-						)
+						promotedPostRow = sqlmock.NewRows(repository.SelectColumns)
+						promotedPostRow = test.PostToRowPtrList(testData.PromotedPosts, promotedPostRow, feedLimit)
 					})
 
-					Context("with a promoted post", func() {
+					Context("with a promoted post", Label("GenerateFeedV1Request"), func() {
 						BeforeEach(func() {
+							mockSQL.ExpectBegin()
 							mockSQL.ExpectQuery(query).WillReturnRows(rows)
+							mockSQL.ExpectCommit()
 
-							promotedQuery := fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
-								strings.Join(repository.SelectColumns, ", "),
-								repository.TableName,
-							)
+							mockSQL.ExpectBegin()
+							mockSQL.ExpectQuery(promotedPostQuery).WithArgs(true).WillReturnRows(promotedPostRow)
+							mockSQL.ExpectCommit()
 
-							mockSQL.ExpectQuery(promotedQuery).
-								WithArgs(true).
-								WillReturnRows(rows)
+							mockSQL.ExpectClose()
 
-							request = &pb.GenerateFeedV1Request{
-								PageId: 1,
-							}
-
+							request = &pb.GenerateFeedV1Request{PageId: pageId}
 							response, err = server.GenerateFeedV1(ctx, request)
 						})
 
 						It("should return a number of the created posts correctly", func() {
 							Expect(response.Posts).ShouldNot(BeEmpty())
 							Expect(err).Should(BeNil())
+
+							posts := transform.PbToPostPtrList(response.Posts)
+							Expect(testData.PromotedPosts[0]).Should(Equal(posts[1]))
 						})
 					})
 
-					Context("without a promoted post", func() {
+					Context("without a promoted post", Label("GenerateFeedV1Request"), func() {
 						BeforeEach(func() {
+							mockSQL.ExpectBegin()
 							mockSQL.ExpectQuery(query).WillReturnRows(rows)
+							mockSQL.ExpectCommit()
 
-							query = fmt.Sprintf("SELECT %s FROM %s WHERE promoted",
-								strings.Join(repository.SelectColumns, ", "),
-								repository.TableName,
-							)
-							mockSQL.ExpectQuery(query).WithArgs(true).
-								WillReturnError(sql.ErrNoRows)
+							mockSQL.ExpectBegin()
+							mockSQL.ExpectQuery(promotedPostQuery).WithArgs(true).WillReturnError(sql.ErrNoRows)
+							mockSQL.ExpectRollback()
 
-							request = &pb.GenerateFeedV1Request{
-								PageId: 1,
-							}
+							mockSQL.ExpectClose()
 
+							request = &pb.GenerateFeedV1Request{PageId: pageId}
 							response, err = server.GenerateFeedV1(ctx, request)
 						})
 
@@ -229,29 +228,15 @@ var _ = Describe("Reddit Feed API Server", func() {
 				}
 			})
 
-			Context("when generates unsuccessfully", func() {
-				var (
-					exec *sqlmock.ExpectedQuery
-				)
-
-				BeforeEach(func() {
-					query := fmt.Sprintf("SELECT %s FROM %s ORDER BY score DESC LIMIT %d OFFSET %d",
-						strings.Join(repository.SelectColumns, ", "),
-						repository.TableName,
-						feedLimit,
-						offset,
-					)
-					exec = mockSQL.ExpectQuery(query)
-				})
-
-				Context("when fails to generate because of a database connection error", func() {
+			Context("when generates unsuccessfully", Label("GenerateFeedV1Request"), func() {
+				Context("when fails to generate because of a database connection error", Label("GenerateFeedV1Request"), func() {
 					BeforeEach(func() {
-						exec.WillReturnError(sql.ErrConnDone)
+						mockSQL.ExpectBegin()
+						mockSQL.ExpectQuery(query).WillReturnError(sql.ErrConnDone)
+						mockSQL.ExpectRollback()
+						mockSQL.ExpectClose()
 
-						request = &pb.GenerateFeedV1Request{
-							PageId: 1,
-						}
-
+						request = &pb.GenerateFeedV1Request{PageId: pageId}
 						response, err = server.GenerateFeedV1(ctx, request)
 					})
 
@@ -261,14 +246,14 @@ var _ = Describe("Reddit Feed API Server", func() {
 					})
 				})
 
-				Context("when fails to generate because of a not found error", func() {
+				Context("when fails to generate because of a not found error", Label("GenerateFeedV1Request"), func() {
 					BeforeEach(func() {
-						exec.WillReturnRows(sqlmock.NewRows(repository.SelectColumns))
+						mockSQL.ExpectBegin()
+						mockSQL.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(repository.SelectColumns))
+						mockSQL.ExpectCommit()
+						mockSQL.ExpectClose()
 
-						request = &pb.GenerateFeedV1Request{
-							PageId: 1,
-						}
-
+						request = &pb.GenerateFeedV1Request{PageId: pageId}
 						response, err = server.GenerateFeedV1(ctx, request)
 					})
 
