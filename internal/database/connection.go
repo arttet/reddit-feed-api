@@ -1,9 +1,9 @@
 package database
 
 import (
-	"go.uber.org/zap"
-
 	"github.com/jmoiron/sqlx"
+
+	"go.uber.org/zap"
 )
 
 // NewConnection returns a new database connection.

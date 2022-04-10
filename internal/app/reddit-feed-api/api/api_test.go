@@ -11,16 +11,16 @@ import (
 	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repository"
 	"github.com/arttet/reddit-feed-api/internal/mock"
 	"github.com/arttet/reddit-feed-api/internal/test"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
+	"github.com/jmoiron/sqlx"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/jmoiron/sqlx"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

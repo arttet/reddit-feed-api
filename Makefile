@@ -68,6 +68,28 @@ clean:
 
 ################################################################################
 
+.PHONY: run
+run:
+	go run cmd/reddit-feed-api/main.go --config configs/reddit-feed-api/dev.yml
+
+.PHONY: cli-create
+cli-create:
+	go run cmd/reddit-feed-cli/main.go create
+
+.PHONY: cli-generate
+cli-generate:
+	go run cmd/reddit-feed-cli/main.go generate
+
+.PHONY: producer
+producer:
+	go run cmd/reddit-feed-cli/main.go producer
+
+.PHONY: consumer
+consumer:
+	go run cmd/reddit-feed-cli/main.go consumer
+
+################################################################################
+
 # https://github.com/bufbuild/buf/releases
 BUF_VERSION=v1.3.1
 
@@ -120,18 +142,28 @@ endif
 
 ################################################################################
 
-.build: .build-reddit-feed-api
+.build: \
+	.build-reddit-feed-api .build-reddit-feed-cli
 
-.build-reddit-feed-api: \
-	$(eval SERVICE_NAME := reddit-feed-api) \
-	$(eval SERVICE_MAIN := cmd/$(SERVICE_NAME)/main.go) \
-	$(eval SERVICE_EXE  := ./bin/$(SERVICE_NAME)) \
-	.build-template
-
-.build-template:
+.build-reddit-feed-api:
+	$(eval SERVICE_NAME := reddit-feed-api)
+	$(eval SERVICE_MAIN := cmd/$(SERVICE_NAME)/main.go)
+	$(eval SERVICE_EXE  := ./bin/$(SERVICE_NAME))
 	CGO_ENABLED=0 go build \
 		-mod=mod \
 		-tags='no_mysql no_sqlite3' \
+		-ldflags=" \
+			-X '$(GITHUB_PATH)/internal/config.version=$(VERSION)' \
+			-X '$(GITHUB_PATH)/internal/config.commitHash=$(COMMIT_HASH)' \
+		" \
+		-o $(SERVICE_EXE)$(shell go env GOEXE) $(SERVICE_MAIN)
+
+.build-reddit-feed-cli:
+	$(eval SERVICE_NAME := reddit-feed-cli)
+	$(eval SERVICE_MAIN := cmd/$(SERVICE_NAME)/main.go)
+	$(eval SERVICE_EXE  := ./bin/$(SERVICE_NAME))
+	CGO_ENABLED=0 go build \
+		-mod=mod \
 		-ldflags=" \
 			-X '$(GITHUB_PATH)/internal/config.version=$(VERSION)' \
 			-X '$(GITHUB_PATH)/internal/config.commitHash=$(COMMIT_HASH)' \

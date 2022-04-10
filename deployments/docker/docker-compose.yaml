@@ -63,7 +63,7 @@ services:
       - ./scripts/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
 
   jaeger:
-    image: jaegertracing/all-in-one
+    image: jaegertracing/all-in-one:latest
     restart: unless-stopped
     logging:
       driver: 'gelf'

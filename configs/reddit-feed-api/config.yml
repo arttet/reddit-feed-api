@@ -2,7 +2,6 @@ project:
   name: Reddit Feed API
   debug: false
   environment: production
-  swaggerDir: api/openapi-spec
 
 grpc:
   host: 0.0.0.0
@@ -58,10 +57,9 @@ status:
   swaggerDir: api/openapi-spec
   swaggerPath: /swagger/
 
-kafka:
+producer:
   capacity: 64
   topic: reddit-feed-events
-  groupId: reddit-feed-api
   brokers:
     - kafka:9092
     - localhost:9094

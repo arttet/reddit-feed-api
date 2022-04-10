@@ -15,9 +15,10 @@
 
 1. Install the latest Go from https://go.dev/
 1. Install `make` and `curl` tools.
+1. Install PostgreSQL 13 or later from https://www.postgresql.org/download/
 1. Install the latest Jaeger from https://www.jaegertracing.io/
 1. Install the latest Prometheus from https://prometheus.io/
-1. Install Kafka 2.8.0 or later from https://kafka.apache.org/
+1. Install Kafka 3.1.0 or later from https://kafka.apache.org/
 1. Install the latest Docker from https://www.docker.com/
 
 ### Build
@@ -36,7 +37,7 @@ docker-compose build
 
 * For local development
 ```sh
-go run cmd/reddit-feed-api/main.go --cfg configs/reddit-feed-api/config-dev.yml
+make run
 ```
 
 * Docker

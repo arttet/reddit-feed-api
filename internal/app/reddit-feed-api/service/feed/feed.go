@@ -6,6 +6,7 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/service/repository"
 	"github.com/arttet/reddit-feed-api/internal/model"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 

@@ -1,0 +1,21 @@
+consumer:
+  topic: reddit-feed-events
+  groupId: reddit-feed-api
+  brokers:
+    - localhost:9092
+
+logger:
+  level: debug
+  encoding: json
+  outputPaths:
+    - stdout
+  errorOutputPaths:
+    - stdout
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    levelEncoder: lowercase
+    timeKey: time
+    timeEncoder: iso8601
+    callerKey: file
+    callerEncoder: file:line
