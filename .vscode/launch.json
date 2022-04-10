@@ -8,7 +8,7 @@
             "name": "Test Package",
             "type": "go",
             "request": "launch",
-            "mode": "test",
+            "mode": "auto",
             "program": "${fileDirname}"
         },
         {
@@ -19,8 +19,52 @@
             "program": "cmd/reddit-feed-api/main.go",
             "cwd": "${workspaceFolder}",
             "args": [
-                "--cfg",
-                "configs/reddit-feed-api/config-dev.yml",
+                "--config",
+                "configs/reddit-feed-api/dev.yml",
+            ],
+        },
+        {
+            "name": "Reddit Feed CLI: Create",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "cmd/reddit-feed-cli/main.go",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "create",
+            ],
+        },
+        {
+            "name": "Reddit Feed CLI: Generate",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "cmd/reddit-feed-cli/main.go",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "generate",
+            ],
+        },
+        {
+            "name": "Reddit Feed CLI: Producer",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "cmd/reddit-feed-cli/main.go",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "producer",
+            ],
+        },
+        {
+            "name": "Reddit Feed CLI: Consumer",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "cmd/reddit-feed-cli/main.go",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "consumer",
             ],
         },
         {

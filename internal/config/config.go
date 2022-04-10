@@ -11,19 +11,9 @@ import (
 
 // Build information -ldflags .
 var (
-	version    string = "dev"
-	commitHash string = "-"
+	Version    string = "dev"
+	CommitHash string = "-"
 )
-
-var cfg *Config
-
-func GetConfigInstance() Config {
-	if cfg != nil {
-		return *cfg
-	}
-
-	return Config{}
-}
 
 // Project contains all parameters project information.
 type Project struct {
@@ -83,16 +73,20 @@ type Status struct {
 	ReadinessPath string `yaml:"readinessPath"`
 	VersionPath   string `yaml:"versionPath"`
 	LoggerPath    string `yaml:"loggerPath"`
-	SwaggerDir    string `yaml:"swaggerDir"`
-	SwaggerPath   string `yaml:"swaggerPath"`
 }
 
-// Kafka contains all parameters Kafka information.
-type Kafka struct {
+// The Kafka producer contains all parameters Producer information.
+type Producer struct {
 	Capacity int      `yaml:"capacity"`
 	Topic    string   `yaml:"topic"`
-	GroupID  string   `yaml:"groupId"`
 	Brokers  []string `yaml:"brokers"`
+}
+
+// The Kafka consume contains all parameters Consume information.
+type Consume struct {
+	Topic   string   `yaml:"topic"`
+	GroupID string   `yaml:"groupId"`
+	Brokers []string `yaml:"brokers"`
 }
 
 // Config contains all configuration parameters in the config package.
@@ -105,7 +99,7 @@ type Config struct {
 	Jaeger   Jaeger     `yaml:"jaeger"`
 	Metrics  Metrics    `yaml:"metrics"`
 	Status   Status     `yaml:"status"`
-	Kafka    Kafka      `yaml:"kafka"`
+	Producer Producer   `yaml:"producer"`
 }
 
 // String returns a data source name.
@@ -122,25 +116,18 @@ func (db *Database) String() string {
 	return dsn
 }
 
-// ReadConfigYML reads configurations from file and inits instance Config.
-func ReadConfigYML(configYML string) error {
-	if cfg != nil {
-		return nil
-	}
-
-	file, err := os.Open(configYML)
+// ReadConfigYML reads the config file into the config struct.
+func ReadConfigYML(filename string, cfg interface{}) error {
+	file, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
 	decoder := yaml.NewDecoder(file)
-	if err := decoder.Decode(&cfg); err != nil {
+	if err := decoder.Decode(cfg); err != nil {
 		return err
 	}
-
-	cfg.Project.Version = version
-	cfg.Project.CommitHash = commitHash
 
 	return nil
 }

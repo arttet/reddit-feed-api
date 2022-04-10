@@ -8,12 +8,13 @@ import (
 
 	"github.com/arttet/reddit-feed-api/internal/config"
 	"github.com/arttet/reddit-feed-api/internal/model"
+
+	"github.com/Shopify/sarama"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.uber.org/zap"
-
-	"github.com/Shopify/sarama"
 )
 
 var (
@@ -21,11 +22,11 @@ var (
 )
 
 func init() {
-	tracer = otel.Tracer("github.com/arttet/reddit-feed-api/internal/broker")
+	tracer = otel.Tracer("github.com/arttet/reddit-feed-api/internal/app/reddit-feed-api/broker")
 }
 
 type Producer interface {
-	CreatePosts(offers model.Posts)
+	CreatePosts(posts model.Posts)
 }
 
 type producer struct {
@@ -35,20 +36,20 @@ type producer struct {
 	logger      *zap.Logger
 }
 
-type messageType uint16
+type MessageType uint16
 
 const (
-	created messageType = iota
+	Created MessageType = iota
 )
 
-type message struct {
-	Type  messageType
+type Message struct {
+	Type  MessageType
 	Value map[string]interface{}
 }
 
 func NewProducer(
 	ctx context.Context,
-	cfg *config.Kafka,
+	cfg *config.Producer,
 	logger *zap.Logger,
 ) (
 	Producer,
@@ -84,14 +85,14 @@ func (p *producer) CreatePosts(posts model.Posts) {
 		result[fmt.Sprintf("%d", i)] = post
 	}
 
-	if err := p.send("Producer.CreatePosts", created, result); err != nil {
+	if err := p.send("Producer.CreatePosts", Created, result); err != nil {
 		p.logger.Error("failed to send a message", zap.Error(err))
 	}
 }
 
 func (p *producer) send(
 	spanName string,
-	msgType messageType,
+	msgType MessageType,
 	value map[string]interface{},
 ) error {
 
@@ -99,7 +100,7 @@ func (p *producer) send(
 	defer span.End()
 
 	bytes, err := json.Marshal(
-		message{
+		Message{
 			Type:  msgType,
 			Value: value,
 		})

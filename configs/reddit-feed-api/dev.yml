@@ -42,7 +42,7 @@ logger:
     - bin/logs.json
   errorOutputPaths:
     - stdout
-    - bin/errors.json
+    - bin/logs.json
   encoderConfig:
     messageKey: message
     levelKey: level
@@ -59,12 +59,9 @@ status:
   readinessPath: /ready
   versionPath: /version
   loggerPath: /log/level
-  swaggerDir: api/openapi-spec
-  swaggerPath: /swagger/
 
-kafka:
+producer:
   capacity: 64
   topic: reddit-feed-events
-  groupId: reddit-feed-api
   brokers:
     - localhost:9092
