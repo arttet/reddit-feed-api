@@ -18,6 +18,7 @@
 1. Install PostgreSQL 13 or later from https://www.postgresql.org/download/
 1. Install the latest Jaeger from https://www.jaegertracing.io/
 1. Install the latest Prometheus from https://prometheus.io/
+1. Install OpenJDK 17 from https://openjdk.java.net/projects/jdk/17/
 1. Install Kafka 3.1.0 or later from https://kafka.apache.org/
 1. Install the latest Docker from https://www.docker.com/
 

@@ -66,6 +66,11 @@ clean:
 	docker rm -f $(shell docker ps -a -q) || true
 	docker volume rm $(shell docker volume ls -q) || true
 
+.PHONY: bump
+bump:
+	go get -u ./...
+	go mod tidy
+
 ################################################################################
 
 .PHONY: run
