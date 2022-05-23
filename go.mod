@@ -8,7 +8,7 @@ replace github.com/arttet/reddit-feed-api/pkg/transform => ./pkg/transform
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
-	github.com/Masterminds/squirrel v1.5.2
+	github.com/Masterminds/squirrel v1.5.3
 	github.com/Shopify/sarama v1.33.0
 	github.com/arttet/reddit-feed-api/pkg/reddit-feed-api v0.0.0-20220517120220-2aaf10f1225d
 	github.com/golang/mock v1.6.0
