@@ -54,6 +54,7 @@ func createGatewayServer(grpcAddr, gatewayAddr string) *http.Server {
 		zap.L().Fatal("failed registration handler", zap.Error(err))
 	}
 
+	//nolint:gosec
 	gatewayServer := &http.Server{
 		Addr:    gatewayAddr,
 		Handler: tracingWrapper(mux),

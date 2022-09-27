@@ -54,7 +54,7 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer logger.Sync() // nolint:errcheck
+		defer logger.Sync() //nolint:errcheck
 
 		logger.Info("starting service",
 			zap.String("name", cfg.Project.Name),

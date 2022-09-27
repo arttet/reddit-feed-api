@@ -37,7 +37,7 @@ var consumerCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer logger.Sync() // nolint:errcheck
+		defer logger.Sync() //nolint:errcheck
 
 		ctx, cancel := context.WithCancel(context.Background())
 

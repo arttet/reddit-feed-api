@@ -23,7 +23,7 @@ services:
       - 8080:8080 # REST
       - 8082:8082 # gRPC
       - 9100:9100 # Metrics prometheus
-      - 8000:8000 # Status prometheus
+      - 8000:8000 # Status server
       - 40000:40000 # Debug port
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8000/live']
@@ -148,7 +148,7 @@ services:
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
     ports:
-      - 8008:8080
+      - 7000:8080
     restart: always
     volumes:
       - swagger_data:/docs

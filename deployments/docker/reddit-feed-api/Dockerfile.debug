@@ -1,4 +1,4 @@
-FROM golang:1.18 AS builder
+FROM golang:1.19 AS builder
 
 ARG GITHUB_PATH=github.com/arttet/reddit-feed-api
 ARG VERSION COMMIT_HASH
@@ -18,7 +18,7 @@ RUN make build
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 
-FROM golang:1.18 AS server
+FROM golang:1.19 AS server
 
 ARG GITHUB_PATH=github.com/arttet/reddit-feed-api
 ARG SERVICE_NAME=reddit-feed-api

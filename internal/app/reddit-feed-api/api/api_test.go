@@ -135,7 +135,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 		const (
 			feedLimit = 27
 			offset    = 0
-			pageId    = 1
+			pageID    = 1
 		)
 
 		var (
@@ -191,7 +191,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 							mockSQL.ExpectClose()
 
-							request = &pb.GenerateFeedV1Request{PageId: pageId}
+							request = &pb.GenerateFeedV1Request{PageId: pageID}
 							response, err = server.GenerateFeedV1(ctx, request)
 						})
 
@@ -216,7 +216,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 
 							mockSQL.ExpectClose()
 
-							request = &pb.GenerateFeedV1Request{PageId: pageId}
+							request = &pb.GenerateFeedV1Request{PageId: pageID}
 							response, err = server.GenerateFeedV1(ctx, request)
 						})
 
@@ -236,7 +236,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 						mockSQL.ExpectRollback()
 						mockSQL.ExpectClose()
 
-						request = &pb.GenerateFeedV1Request{PageId: pageId}
+						request = &pb.GenerateFeedV1Request{PageId: pageID}
 						response, err = server.GenerateFeedV1(ctx, request)
 					})
 
@@ -253,7 +253,7 @@ var _ = Describe("Reddit Feed API Server", func() {
 						mockSQL.ExpectCommit()
 						mockSQL.ExpectClose()
 
-						request = &pb.GenerateFeedV1Request{PageId: pageId}
+						request = &pb.GenerateFeedV1Request{PageId: pageID}
 						response, err = server.GenerateFeedV1(ctx, request)
 					})
 

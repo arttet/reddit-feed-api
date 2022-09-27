@@ -4,20 +4,16 @@ deps:
   - remote: buf.build
     owner: envoyproxy
     repository: protoc-gen-validate
-    branch: main
-    commit: dc09a417d27241f7b069feae2cd74a0e
+    commit: 45685e052c7e406b9fbd441fc7a568a5
   - remote: buf.build
     owner: googleapis
     repository: googleapis
-    branch: main
-    commit: 2df0667eabed4ee0af77ea6d1166747a
+    commit: e9fcfb66f77242e5b8fd4564d7a01033
   - remote: buf.build
     owner: grpc-ecosystem
     repository: grpc-gateway
-    branch: main
-    commit: ff83506eb9cc4cf8972f49ce87e6ed3e
+    commit: bc28b723cd774c32b6fbc77621518765
   - remote: buf.build
     owner: innovation-upstream
     repository: protoc-gen-struct-transformer
-    branch: main
-    commit: f79706dfb1084a2eb535ac74d233d1b7
+    commit: c69671238aa54aefabf7758418e0d711
