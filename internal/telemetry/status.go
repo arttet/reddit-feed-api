@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	// nolint:gosec
+	//nolint:gosec
 	_ "net/http/pprof"
 
 	"github.com/arttet/reddit-feed-api/internal/config"
@@ -26,6 +26,7 @@ func NewStatusServer(cfg *config.Config, isReady *atomic.Value) *http.Server {
 
 	mux.HandleFunc(cfg.Status.LoggerPath, cfg.Logger.Level.ServeHTTP)
 
+	//nolint:gosec
 	statusServer := &http.Server{
 		Addr:    statusAddr,
 		Handler: mux,

@@ -15,6 +15,7 @@ func CreateMetricsServer(cfg *config.Config) *http.Server {
 	mux := http.DefaultServeMux
 	mux.Handle(cfg.Metrics.Path, promhttp.Handler())
 
+	//nolint:gosec
 	metricsServer := &http.Server{
 		Addr:    addr,
 		Handler: mux,
