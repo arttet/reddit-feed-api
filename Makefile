@@ -1,102 +1,137 @@
 GO_VERSION_SHORT:=$(shell echo `go version` | sed -E 's/.* go(.*) .*/\1/g')
-ifneq ("1.18","$(shell printf "$(GO_VERSION_SHORT)\n1.18" | sort -V | head -1)")
-$(warning NEED GO VERSION >= 1.18. Found: $(GO_VERSION_SHORT))
+ifneq ("1.19","$(shell printf "$(GO_VERSION_SHORT)\n1.19" | sort -V | head -1)")
+$(warning NEED GO VERSION >= 1.19. Found: $(GO_VERSION_SHORT))
 endif
 
+SERVICE_NAME := reddit-feed-api
 GITHUB_PATH=github.com/arttet/reddit-feed-api
 
-###############################################################################
+################################################################################
+
+##  Local commands
+
+.PHONY: help
+help:	## Show this help
+	@fgrep -h "## " $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
 
 .PHONY: all
-all: reqs deps gen build
+all:	## Run the all build commands
+	@make reqs deps gen build
 
 .PHONY: reqs
-reqs: .reqs
+reqs:	## Install requirements
+	@make .reqs
 
 .PHONY: deps
-deps: .deps-go
+deps:	## Build and install Go dependencies
+	@make .deps-go
 
 .PHONY: gen
-gen: .generate-go
+gen:	## Generate Go code
+	@make .generate-go
 
 .PHONY: build
-build:  .build
+build:	## Compile the current package and all of its dependencies
+	@make .build
 
 .PHONY: test
-test:
+test:	## Execute the unit tests
 	go test -v -timeout 30s -coverprofile cover.out ./...
 	go tool cover -func cover.out | grep -v -E '100.0%|total' || echo "OK"
 	go tool cover -func cover.out | grep total | awk '{print ($$3)}'
 
 .PHONY: bench
-bench:
+bench:	## Execute the benchmark tests
 	go test -bench ./... -benchmem -cpuprofile cpu.out -memprofile mem.out -memprofilerate 1
 
 .PHONY: lint
-lint:
+lint:	## Check the current package to catch common mistakes and improve the code
 	buf lint
 	golangci-lint run ./...
 
 .PHONY: tidy
-tidy:
+tidy:	## Cleanup go.mod
 	go mod tidy
 
 .PHONY: fmt
-fmt:
+fmt:	## Format *.go and *.proto files using gofmt and clang-format
 	find . -iname "*.go" | xargs gofmt -w
 	find . -iname "*.proto" | xargs clang-format -i
 
 .PHONY: cover
-cover:
+cover:	## Show the cover report
 	go tool cover -html cover.out
 
 .PHONY: grpcui
-grpcui:
+grpcui:	## Run the grpcui tool
 	grpcui -plaintext localhost:8082
 
-.PHONY: image
-image: .image
-
-.PHONY: debug-image
-debug-image: .debug-image
-
 .PHONY: clean
-clean:
+clean:	## Remove generated artifacts
 	rm -rd ./bin/ || true
-	docker rm -f $(shell docker ps -a -q) || true
-	docker volume rm $(shell docker volume ls -q) || true
 
-.PHONY: bump
-bump:
+.PHONY: update
+update:	## Update dependencies as recorded in the go.mod and go.sum files
 	go get -u ./...
 	go mod tidy
 
 ################################################################################
 
+##  Docker commands
+
+.PHONY: image
+image:		## Build Dockerfile
+	@make .image
+
+.PHONY: debug-image
+debug-image:	## Build Dockerfile.debug
+	@make .debug-image
+
+.PHONY: dc-build
+dc-build:	## Build docker-compose.yaml
+	docker-compose -f deployments/docker/docker-compose.yaml --project-directory . -p $(SERVICE_NAME) build
+
+.PHONY: up
+up:		## Up reddit-feed-api
+	docker-compose up
+
+.PHONY: down
+down:		## Down reddit-feed-api
+	docker-compose down
+
+.PHONY: rm
+rm:		## Remove Docker artifacts
+	docker rm -f $(shell docker ps -a -q) || true
+	docker volume rm $(shell docker volume ls -q) || true
+
+################################################################################
+
+##  CLI commands
+
 .PHONY: run
-run:
+run:		## Run reddit-feed-api locally
 	go run cmd/reddit-feed-api/main.go --config configs/reddit-feed-api/dev.yml
 
 .PHONY: cli-create
-cli-create:
+cli-create:	## Run the CreatePostsV1 handle
 	go run cmd/reddit-feed-cli/main.go create
 
 .PHONY: cli-generate
-cli-generate:
+cli-generate:	## Run the GenerateFeedV1 handle
 	go run cmd/reddit-feed-cli/main.go generate
 
 .PHONY: producer
-producer:
+producer:	## Run the Kafka producer command
 	go run cmd/reddit-feed-cli/main.go producer
 
 .PHONY: consumer
-consumer:
+consumer:	## Run the Kafka consumer command
 	go run cmd/reddit-feed-cli/main.go consumer
 
 ################################################################################
 
 # https://github.com/bufbuild/buf/releases
-BUF_VERSION=v1.3.1
+BUF_VERSION=v1.8.0
 
 OS_NAME=$(shell uname -s)
 OS_ARCH=$(shell uname -m)

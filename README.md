@@ -1,6 +1,6 @@
 # Reddit Feed API
 
-[![Go](https://img.shields.io/badge/Go-1.18-blue.svg)](https://golang.org)
+[![Go](https://img.shields.io/badge/Go-1.19-blue.svg)](https://golang.org)
 [![build](https://github.com/arttet/reddit-feed-api/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/arttet/reddit-feed-api/actions/workflows/build.yml)
 [![tests](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/arttet/reddit-feed-api/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/arttet/reddit-feed-api/branch/main/graph/badge.svg?token=S5a5aZsotj)](https://codecov.io/gh/arttet/reddit-feed-api)
@@ -22,30 +22,40 @@
 1. Install Kafka 3.1.0 or later from https://kafka.apache.org/
 1. Install the latest Docker from https://www.docker.com/
 
-### Build
-
-* For local development
-```sh
-make all
-```
-
-* Docker
-```sh
-docker-compose build
-```
-
 ### Usage
 
-* For local development
 ```sh
-make run
+$ make help
+  Local commands
+help:    Show this help
+all:     Run the all build commands
+reqs:    Install requirements
+deps:    Build and install Go dependencies
+gen:     Generate Go code
+build:   Compile the current package and all of its dependencies
+test:    Execute the unit tests
+bench:   Execute the benchmark tests
+lint:    Check the current package to catch common mistakes and improve the code
+tidy:    Cleanup go.mod
+fmt:     Format *.go and *.proto files using gofmt and clang-format
+cover:   Show the cover report
+grpcui:  Run the grpcui tool
+clean:   Remove generated artifacts
+update:  Update dependencies as recorded in the go.mod and go.sum files
+  Docker commands
+image:           Build Dockerfile
+debug-image:     Build Dockerfile.debug
+dc-build:        Build docker-compose.yaml
+up:              Up reddit-feed-api
+down:            Down reddit-feed-api
+rm:              Remove Docker artifacts
+  CLI commands
+run:             Run reddit-feed-api locally
+cli-create:      Run the CreatePostsV1 handle
+cli-generate:    Run the GenerateFeedV1 handle
+producer:        Run the Kafka producer command
+consumer:        Run the Kafka consumer command
 ```
-
-* Docker
-```sh
-docker-compose up -d
-```
-
 
 ## Reddit Feed API Overview
 
@@ -58,7 +68,7 @@ docker-compose up -d
 
 ### [REST API Server (gRPC-Gateway)](https://github.com/grpc-ecosystem/grpc-gateway)
 
-* http://localhost:8081
+* http://localhost:8080
 
 ### [gRPC Server](https://github.com/grpc/grpc-go)
 
@@ -112,7 +122,7 @@ goose -dir migrations/reddit-feed-api postgres "postgresql://docker:docker@local
 
 ### [Swagger UI](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/arttet/reddit-feed-api/main/api/openapi-spec/api.swagger.json)
 
-* http://localhost:8080
+* http://localhost:7000
 
 ### [Grafana](https://grafana.com/oss/grafana/)
 
