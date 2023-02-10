@@ -608,9 +608,18 @@ func (m *Post) validate(all bool) error {
 
 	// no validation rules for NotSafeForWork
 
-	switch m.PostType.(type) {
-
+	switch v := m.PostType.(type) {
 	case *Post_Link:
+		if v == nil {
+			err := PostValidationError{
+				field:  "PostType",
+				reason: "oneof value cannot be a typed-nil",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
 
 		if _, err := url.Parse(m.GetLink()); err != nil {
 			err = PostValidationError{
@@ -625,8 +634,19 @@ func (m *Post) validate(all bool) error {
 		}
 
 	case *Post_Content:
+		if v == nil {
+			err := PostValidationError{
+				field:  "PostType",
+				reason: "oneof value cannot be a typed-nil",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
 		// no validation rules for Content
-
+	default:
+		_ = v // ensures v is used
 	}
 
 	if len(errors) > 0 {

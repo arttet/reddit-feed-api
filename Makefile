@@ -1,6 +1,6 @@
 GO_VERSION_SHORT:=$(shell echo `go version` | sed -E 's/.* go(.*) .*/\1/g')
-ifneq ("1.19","$(shell printf "$(GO_VERSION_SHORT)\n1.19" | sort -V | head -1)")
-$(warning NEED GO VERSION >= 1.19. Found: $(GO_VERSION_SHORT))
+ifneq ("1.20","$(shell printf "$(GO_VERSION_SHORT)\n1.20" | sort -V | head -1)")
+$(warning NEED GO VERSION >= 1.20. Found: $(GO_VERSION_SHORT))
 endif
 
 SERVICE_NAME := reddit-feed-api
@@ -131,7 +131,7 @@ consumer:	## Run the Kafka consumer command
 ################################################################################
 
 # https://github.com/bufbuild/buf/releases
-BUF_VERSION=v1.8.0
+BUF_VERSION=v1.14.0
 
 OS_NAME=$(shell uname -s)
 OS_ARCH=$(shell uname -m)

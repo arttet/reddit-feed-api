@@ -1,6 +1,6 @@
 module github.com/arttet/reddit-feed-api/pkg/reddit-feed-api
 
-go 1.19
+go 1.20
 
 require (
 	github.com/envoyproxy/protoc-gen-validate v0.6.11

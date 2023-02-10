@@ -2,7 +2,7 @@
 # https://github.com/golangci/golangci-lint/blob/master/pkg/config/linters_settings.go
 ---
 run:
-  timeout: 1m
+  timeout: 5m
   issues-exit-code: 1
   tests: true
   skip-dirs: []
@@ -65,7 +65,7 @@ linters-settings:
   gofmt:
     simplify: true
   gosimple:
-    go: 1.17
+    go: 1.20
   govet:
     enable-all: true
     check-shadowing: true
@@ -134,13 +134,17 @@ linters:
     - exhaustive # check exhaustiveness of enum switch statements
     - nlreturn # nlreturn checks for a new line before return and branch statements to increase code clarity
     - paralleltest # paralleltest detects missing usage of t.Parallel() method in your Go test
+    # TODO: wastedassign is disabled because of generics. You can track the evolution of the generics support by following the https://github.com/golangci/golangci-lint/issues/2649."
+    - wastedassign # wastedassign finds wasted assignment statements.
+    # TODO: rowserrcheck is disabled because of generics. You can track the evolution of the generics support by following the https://github.com/golangci/golangci-lint/issues/2649."
+    - rowserrcheck # checks whether Err of rows is checked successfully
+
   enable:
     - sqlclosecheck # Checks that sql.Rows and sql.Stmt are closed.
     - promlinter # Check Prometheus metrics naming via promlint
     - testpackage # Linter that makes you use a separate _test package
     - asciicheck # Simple linter to check that your code does not contain non-ASCII identifiers
     - bodyclose # checks whether HTTP response body is closed successfully
-    - deadcode # Finds unused code
     - depguard # Go linter that checks if package imports are in a list of acceptable packages
     - dogsled # Checks assignments with too many blank identifiers (e.g. x, _, _, _, := f())
     - dupl # Tool for code clone detection
@@ -158,7 +162,6 @@ linters:
     - gosec # Inspects source code for security problems
     - gosimple # Linter for Go source code that specializes in simplifying a code
     - govet # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
-    - ifshort # Checks that your code uses short syntax for if-statements whenever possible
     - importas # Enforces consistent import aliases
     - ineffassign # Detects when assignments to existing variables are not used
     - makezero # Finds slice declarations with non-zero initial length
@@ -170,9 +173,7 @@ linters:
     - nolintlint # Reports ill-formed or insufficient nolint directives
     - prealloc # Finds slice declarations that could potentially be preallocated
     - predeclared # find code that shadows one of Go's predeclared identifiers
-    - rowserrcheck # checks whether Err of rows is checked successfully
     - staticcheck # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
-    - structcheck # Finds unused struct fields
     - stylecheck # Stylecheck is a replacement for golint
     - tagliatelle # Checks the struct tags.
     - thelper # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
@@ -180,8 +181,6 @@ linters:
     - unconvert # Remove unnecessary type conversions
     - unparam # Reports unused function parameters
     - unused # Checks Go code for unused constants, variables, functions and types
-    - varcheck # Finds unused global variables and constants
-    - wastedassign # wastedassign finds wasted assignment statements.
     - whitespace # Tool for detection of leading and trailing whitespace
 
 issues:
