@@ -72,6 +72,7 @@ clean:	## Remove generated artifacts
 
 .PHONY: update
 update:	## Update dependencies as recorded in the go.mod and go.sum files
+	go list -m -u all
 	go get -u ./...
 	go mod tidy
 
