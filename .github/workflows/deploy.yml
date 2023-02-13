@@ -38,7 +38,7 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: ${{ runner.os }}-buildx-
 
-      - uses: docker/build-push-action@v3
+      - uses: docker/build-push-action@v4
         with:
           push: true
           build-args: |
